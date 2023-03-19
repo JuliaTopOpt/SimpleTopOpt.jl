@@ -3,8 +3,14 @@ uuid = "4972e784-d3e6-4114-81a0-30adeade70b8"
 authors = ["mjachi <mmmeeeker@gmail.com> and contributors"]
 version = "1.0.0-DEV"
 
+[deps]
+NonconvexCore = "035190e5-69f1-488f-aaab-becca2889735"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+TopOpt = "53a1e1a5-51bb-58a9-8a02-02056cc81109"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
+
 [compat]
-julia = "1.7"
+julia = "1.8"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
