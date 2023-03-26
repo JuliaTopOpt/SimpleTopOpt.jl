@@ -2,6 +2,8 @@ using SimpleTopOpt
 using Test
 using TopOpt
 
+using BenchmarkTools
+
 
 @testset "Bogus" begin
     @test 1+1 == 2
@@ -30,3 +32,8 @@ end
 
     println("Made it to the end")
 end
+
+
+
+
+

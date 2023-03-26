@@ -1,5 +1,7 @@
 module SimpleTopOpt
-using TopOpt
+using Reexport
+
+@reexport using Top88
 
 # TODO
 

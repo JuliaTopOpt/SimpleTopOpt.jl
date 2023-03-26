@@ -4,6 +4,7 @@ module Top88
 using LinearAlgebra
 using SparseArrays
 using Statistics
+using TopOpt
 
 export top88
 
@@ -154,5 +155,6 @@ function top88(
     end
     return heatmap(x) , loop , cValues
 end
+
 
 end 
