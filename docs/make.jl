@@ -5,12 +5,12 @@ DocMeta.setdocmeta!(SimpleTopOpt, :DocTestSetup, :(using SimpleTopOpt); recursiv
 
 makedocs(;
     modules=[SimpleTopOpt],
-    authors="mjachi <mmmeeeker@gmail.com> and contributors",
-    repo="https://github.com/mjachi/SimpleTopOpt.jl/blob/{commit}{path}#{line}",
+    authors="Matthew Meeker <mmmeeeker@gmail.com> and contributors",
+    repo="https://github.com/juliatopopt/SimpleTopOpt.jl/blob/{commit}{path}#{line}",
     sitename="SimpleTopOpt.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://mjachi.github.io/SimpleTopOpt.jl",
+        canonical="https://juliatopopt.github.io/SimpleTopOpt.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -20,6 +20,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/mjachi/SimpleTopOpt.jl",
+    repo="github.com/juliatopopt/SimpleTopOpt.jl",
     devbranch="main",
 )
