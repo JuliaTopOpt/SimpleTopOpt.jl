@@ -4,7 +4,7 @@ CurrentModule = SimpleTopOpt
 
 # SimpleTopOpt
 
-Documentation for [SimpleTopOpt](https://github.com/mjachi/SimpleTopOpt.jl).
+Documentation for [SimpleTopOpt](https://github.com/juliatopopt/SimpleTopOpt.jl).
 
 ```@index
 ```
