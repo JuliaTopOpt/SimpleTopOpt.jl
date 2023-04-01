@@ -101,31 +101,30 @@ function check(nelx,nely,rmin,x,dc)
 end
 
 function FE(nelx,nely,x,penal)
-
     KE = lk()
   
-      K = spzeros((nelx+1)*(nely+1), (nelx+1)*(nely+1))
-      U = zeros((nely+1)*(nelx+1))
-      F = zeros((nely+1)*(nelx+1))
-      for elx = 1:nelx
+    K = spzeros((nelx+1)*(nely+1), (nelx+1)*(nely+1))
+    U = zeros((nely+1)*(nelx+1))
+    F = zeros((nely+1)*(nelx+1))
+    for elx = 1:nelx
         for ely = 1:nely 
-          n1 = (nely+1)*(elx-1)+ely
-          n2 = (nely+1)* elx   +ely
-          edof = [n1; n2; n2+1; n1+1]
-          K[edof,edof] += (0.001+0.999*x[ely,elx]^penal)*KE
+            n1 = (nely+1)*(elx-1)+ely
+            n2 = (nely+1)* elx   +ely
+            edof = [n1; n2; n2+1; n1+1]
+            K[edof,edof] += (0.001+0.999*x[ely,elx]^penal)*KE
         end
-      end
+    end
   
-      F .= 0.01
-      fixeddofs = Int64(nely/2+1-(nely/20)):Int64(nely/2+1+(nely/20))
-      alldofs = 1:(nely+1)*(nelx+1)
-      freedofs = setdiff(alldofs,fixeddofs)
+    F .= 0.01
+    fixeddofs = Int64(nely/2+1-(nely/20)):Int64(nely/2+1+(nely/20))
+    alldofs = 1:(nely+1)*(nelx+1)
+    freedofs = setdiff(alldofs,fixeddofs)
   
-      U[freedofs] = K[freedofs, freedofs] \ F[freedofs]
-      U[fixeddofs] .= 0
+    U[freedofs] = K[freedofs, freedofs] \ F[freedofs]
+    U[fixeddofs] .= 0
   
-      return U
-  end
+    return U
+end
 
   function check(nelx,nely,rmin,x,dc)
     dcn=zeros(nely,nelx)
