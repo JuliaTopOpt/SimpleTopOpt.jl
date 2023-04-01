@@ -4,7 +4,6 @@ module Top88
 using LinearAlgebra
 using SparseArrays
 using Statistics
-using TopOpt
 
 export top88
 
@@ -22,9 +21,12 @@ using 88 lines of code." By default, this will reproduce the optimized MBB beam 
 - `penal::T`: The penalization power
 - `rmin::T`: Filter radius divided by the element size
 - `ft::Bool`: Choose between sensitivity (if true) or density filter (if false)
+- `write::Bool`: If true, will write out iteration number, changes, and density
 
 # Returns
-- ``
+- `x`
+- `cValues`
+- `loop`: The final iteration count
 
 """
 function top88(
@@ -33,7 +35,8 @@ function top88(
     volfrac::T=0.5,
     penal::T=3.0,
     rmin::T=2.0,
-    ft::Bool=true
+    ft::Bool=true,
+    write::Bool=false,
 ) where {S <: Integer, T <: AbstractFloat}
     # Physical parameters
     E0 = 1; Emin = 1e-9; nu = 0.3;
@@ -102,7 +105,7 @@ function top88(
         sK = [j*((i+Emin)^penal) for i in ((E0-Emin)*xPhys[:]') for j in KE[:]]
         K = sparse(iK[:],jK[:],sK); K = (K+K')/2
         KK = cholesky(K[freedofs,freedofs])
-        U[freedofs] = KK\F[freedofs]
+        U[freedofs] = KK \ F[freedofs]
         
         edM = [convert(Int64,i) for i in edofMat]
         mat = (U[edM]*KE).*U[edM]
@@ -146,14 +149,19 @@ function top88(
                 l2 = lmid 
             end
         end
+
         change = maximum(abs.(x-xnew))
         x = xnew
-        # Print densities
-        println("Loop = ", loop, ", Change = ", change ,", c = ", c, ", structural density = ", mean(x))
+
+        if write
+            # Print densities
+            println("Loop = ", loop, ", Change = ", change ,", c = ", c, ", structural density = ", mean(x))
+        end
 
         loop >= 25 && break       
     end
-    return heatmap(x) , loop , cValues
+
+    return x, cValues, loop 
 end
 
 

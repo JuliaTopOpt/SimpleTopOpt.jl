@@ -1,36 +1,86 @@
+using BenchmarkTools
+using LinearAlgebra
+using MAT
 using SimpleTopOpt
 using Test
-using TopOpt
 
-using BenchmarkTools
+@testset "Top88 comparison" begin
 
+    println("Starting Top88 comparison suite...")
 
-@testset "Bogus" begin
-    @test 1+1 == 2
-    @test 2+2 != 2
-    @test 1.0 isa Real
+    vars = matread("mat_cases/top88_60_40_04_3_2_1.mat")
+    x1 = vars["x"]
+
+    x1h,_,_ = top88(60, 40, 0.4, 3.0, 2.0, true, false)
+
+    @test size(x1h) == size(x1)
+
+    ss = size(x1h)
+    num_elements = ss[1] * ss[2]
+
+    @test (mean(x1h) - mean(x1)) ≈ 0 atol=0.001
+    @test (norm(x1h - x1))/num_elements ≈ 0 atol=0.01
+    println("Finished first case...")
+
+    vars = matread("mat_cases/top88_30_30_04_3_2_1.mat")
+    x1 = vars["ans"]
+
+    x1h,_,_ = top88(30, 30, 0.4, 3.0, 2.0, true, false)
+
+    @test size(x1h) == size(x1)
+    
+    ss = size(x1h)
+    num_elements = ss[1] * ss[2]
+
+    @test (mean(x1h) - mean(x1)) ≈ 0 atol=0.001
+    @test (norm(x1h-x1))/num_elements ≈ 0 atol=0.01
+    println("Finished second case...")
 end
 
-@testset "ForcingTopOptPrecompileEtc" begin
-    # geso.jl example
-    E = 1.0 # Young’s modulus
-    v = 0.3 # Poisson’s ratio
-    f = 1.0; # downward force
+@testset "Top88 benchmarking" begin
+    println("Starting Top88 benchmarking suite")
 
-    nels = (160, 40)
-    problem = HalfMBB(Val{:Linear}, nels, (1.0, 1.0), E, v, f)
+    println("Finished the benchmarking suite")
+end
 
-    solver = FEASolver(Direct, problem; xmin=0.01, penalty=TopOpt.PowerPenalty(3.0))
 
-    comp = Compliance(solver)
-    volfrac = Volume(solver)
-    sensfilter = SensFilter(solver; rmin=4.0)
-    geso = GESO(comp, volfrac, 0.5, sensfilter)
+@testset "TopH comparison" begin
+    println("Starting TopH comparison suite...")
 
-    x0 = ones(length(solver.vars))
-    result = geso(x0)
+    vars = matread("mat_cases/toph_40_40_04_3_12.mat")
+    x1 = vars["x"]
 
-    println("Made it to the end")
+    x1h,_,_ = toph(40, 40, 0.4, 3.0, 1.2)
+
+    @test size(x1h) == size(x1)
+
+    ss = size(x1h)
+    num_elements = ss[1] * ss[2]
+
+    @test (mean(x1h) - mean(x1)) ≈ 0 atol=0.001
+    @test (norm(x1h - x1))/num_elements ≈ 0 atol=0.01
+    println("Finished first case...")
+
+    vars = matread("mat_cases/toph_80_80_04_3_12.mat")
+    x1 = vars["ans"]
+
+    x1h,_,_ = toph(80, 80, 0.4, 3.0, 1.2)
+
+    @test size(x1h) == size(x1)
+    
+    ss = size(x1h)
+    num_elements = ss[1] * ss[2]
+
+    @test (mean(x1h) - mean(x1)) ≈ 0 atol=0.001
+    @test (norm(x1h-x1))/num_elements ≈ 0 atol=0.01
+    println("Finished the comparison suite")
+end
+
+
+@testset "TopH benchmarking" begin
+    println("Starting TopH benchmarking suite")
+
+
 end
 
 

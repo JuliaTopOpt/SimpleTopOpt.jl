@@ -1,8 +1,10 @@
 module SimpleTopOpt
 using Reexport
 
-@reexport using Top88
+include("top88.jl")
+include("toph.jl")
 
-# TODO
+@reexport using .Top88
+@reexport using .TopH
 
 end
