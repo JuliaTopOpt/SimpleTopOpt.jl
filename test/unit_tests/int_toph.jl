@@ -2,6 +2,7 @@ using MAT
 using SimpleTopOpt
 using Test   
 using LinearAlgebra
+using Statistics
 
 
 # First comparison on 40x40
@@ -33,6 +34,3 @@ num_elements = ss[1] * ss[2]
 residuals = abs.(x4h - x4)
 @test (mean(residuals)) ≈ 0 atol=1e-6
 @test (norm(residuals))/num_elements ≈ 0 atol=1e-6
-
-# Benchmarking
-io = IOContext(stdout)

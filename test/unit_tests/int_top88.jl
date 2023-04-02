@@ -1,7 +1,8 @@
 using MAT
 using SimpleTopOpt
-using Test   
+using Test
 using LinearAlgebra
+using Statistics
 
 
 # First comparison on 60x40
@@ -13,8 +14,8 @@ x1h,_,_ = top88(60, 40, 0.4, 3.0, 2.0, true, false)
 ss = size(x1h)
 num_elements = ss[1] * ss[2]
 
-@test (mean(x1h) - mean(x1)) ≈ 0 atol=0.001
-@test (norm(x1h - x1))/num_elements ≈ 0 atol=0.01
+@test (mean(x1h) - mean(x1)) ≈ 0 atol=1e-10
+@test (norm(x1h - x1))/num_elements ≈ 0 atol=1e-10
 
 # Second comparison on 30x30
 vars = matread("mat_cases/top88_30_30_04_3_2_1.mat")
@@ -25,7 +26,5 @@ x2h,_,_ = top88(30, 30, 0.4, 3.0, 2.0, true, false)
 ss = size(x2h)
 num_elements = ss[1] * ss[2]
 
-@test (mean(x2h) - mean(x2)) ≈ 0 atol=0.001
-@test (norm(x2h-x2))/num_elements ≈ 0 atol=0.01
-
-# TODO -- single iteration
+@test (mean(x2h) - mean(x2)) ≈ 0 atol=1e-10
+@test (norm(x2h-x2))/num_elements ≈ 0 atol=1e-10

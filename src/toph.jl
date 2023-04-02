@@ -5,7 +5,9 @@ using SparseArrays
 using Statistics
 
 export toph
-
+export OC
+export check
+export FE
 
 """
     toph(nelx, nely, volfrac, penal, rmin, ft)
@@ -77,7 +79,6 @@ function OC(nelx,nely,x,volfrac,dc)
     return xnew
 end
 
-
 function check(nelx,nely,rmin,x,dc)
     dcn=zeros(nely,nelx)
 
@@ -127,37 +128,11 @@ function FE(nelx,nely,x,penal)
     return U
 end
 
-  function check(nelx,nely,rmin,x,dc)
-    dcn=zeros(nely,nelx)
-
-    for i = 1:nelx
-      for j = 1:nely
-        sum=0.0
-
-        for k = max(i-floor(rmin),1):min(i+floor(rmin),nelx)
-          for l = max(j-floor(rmin),1):min(j+floor(rmin),nely)
-            l = Int64(l); k = Int64(k)
-
-            fac = rmin-sqrt((i-k)^2+(j-l)^2)
-            sum = sum+max(0,fac)
-            dcn[j,i] += max(0,fac)*x[l,k]*dc[l,k]
-          end
-        end
-
-        dcn[j,i] = dcn[j,i]/(x[j,i]*sum)
-      end
-    end
-    return dcn
-end
-
-
-
 function lk()
   return [ 2/3 -1/6 -1/3 -1/6
           -1/6  2/3 -1/6 -1/3
           -1/3 -1/6  2/3 -1/6
           -1/6 -1/3 -1/6  2/3 ]
 end
-
 
 end

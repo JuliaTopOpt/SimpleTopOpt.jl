@@ -2,6 +2,18 @@ using MAT
 using SimpleTopOpt
 using Test
 
+@testset "TopH Suite" begin
+
+    @testset "Unit tests" begin
+        include("unit_tests/ut_toph.jl")
+    end
+
+    @testset "Integration" begin
+        include("unit_tests/int_toph.jl")
+    end
+
+end
+
 @testset "Top88 Suite" begin
 
     @testset "Unit tests" begin
@@ -15,40 +27,26 @@ using Test
  
 end
 
-@testset "TopH comparison" begin
+@testset "TopH Suite" begin
 
-    # First comparison on 40x40
-    vars = matread("mat_cases/toph_40_40_04_3_12.mat")
-    x3 = vars["x"]
+    @testset "Unit tests" begin
+        include("unit_tests/ut_toph.jl")
+    end
 
-    x3h,_,_ = toph(40, 40, 0.4, 3.0, 1.2)
+    @testset "Integration" begin
+        include("unit_tests/int_toph.jl")
+    end
 
-    @test size(x3h) == size(x3)
+end
 
-    ss = size(x3h)
-    num_elements = ss[1] * ss[2]
+@testset "Benchmarking" begin
 
-    residuals = abs.(x3h - x3)
-    @test (mean(residuals)) ≈ 0 atol=1e-6
-    @test (norm(residuals))/num_elements ≈ 0 atol=1e-6
+    @testset "top88" begin
+        include("benchmarks/bm_top88.jl")
+    end
 
-    # Second comparison on 20x20
-    vars = matread("mat_cases/toph_20_20_04_3_12.mat")
-    x4 = vars["ans"]
-
-    x4h,_,_ = toph(20, 20, 0.4, 3.0, 1.2)
-
-    @test size(x4h) == size(x4)
-    
-    ss = size(x4h)
-    num_elements = ss[1] * ss[2]
-
-    residuals = abs.(x4h - x4)
-    @test (mean(residuals)) ≈ 0 atol=1e-6
-    @test (norm(residuals))/num_elements ≈ 0 atol=1e-6
-
-    # Benchmarking
-    io = IOContext(stdout)
-
+    @testset "toph" begin
+        include("benchmarks/bm_toph.jl")
+    end
 
 end
