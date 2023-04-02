@@ -42,12 +42,13 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false)
         change = maximum(abs.(x-xold))
         
         write && println("Change = ", change, " c = ", c)
+        # loop >= 1000 && break
+        # TODO -- See one iteration diff
         loop >= 1000 && break
     end
 
     return x, cValues, loop
 end
-
 
 function OC(nelx,nely,x,volfrac,dc)
     l1 = 0; l2 = 100000; move = 0.2

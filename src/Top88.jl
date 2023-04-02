@@ -24,7 +24,7 @@ using 88 lines of code." By default, this will reproduce the optimized MBB beam 
 - `write::Bool`: If true, will write out iteration number, changes, and density
 
 # Returns
-- `x`
+- `x`: Final material distribution, presented as a matrix
 - `cValues`
 - `loop`: The final iteration count
 
@@ -50,7 +50,7 @@ function top88(
 
     nodenrs = reshape(1:(1+nelx)*(1+nely),1+nely,1+nelx)
     edofVec = reshape(2*nodenrs[1:end-1,1:end-1].+1, nelx*nely, 1)
-    edofMat = zeros(nelx*nely, 8)
+    edofMat = zeros(Int64, nelx*nely, 8)
 
     offsets = [0 1 2*nely.+[2 3 0 1] -2 -1]
     for i = 1:8
@@ -69,27 +69,8 @@ function top88(
     alldofs = 1:2*(nely+1)*(nelx+1)
     freedofs = setdiff(alldofs, fixeddofs)
 
-    # Prepare filter
-    iH = ones(nelx*nely*(2*(convert(Int64,ceil(rmin)-1))+1)^2)
-    jH = ones(size(iH))
-    sH = zeros(size(iH))
-    k = 0
-    for i1 = 1:nelx
-        for j1 = 1:nely
-            e1 = (i1-1)*nely+j1
-            for i2 = max(i1-(ceil(rmin)-1),1):min(i1+(ceil(rmin)-1),nelx)
-                for j2 = max(j1-(ceil(rmin)-1),1):min(j1+(ceil(rmin)-1),nely)
-                    e2 = (i2-1)*nely+j2
-                    k += 1
-                    iH[k] = e1
-                    jH[k] = e2
-                    sH[k] = max(0,rmin-sqrt((i1-i2)^2+(j1-j2)^2))
-                end
-            end
-        end
-    end
-    H = sparse(iH,jH,sH)
-    Hs = [sum(H[i,:]) for i = 1:(size(H)[1])]
+    # Prepare the filter
+    H, Hs = prepare_filter(nelx, nely, rmin)
     
     # Initialize iteration
     x = volfrac*ones(nely,nelx)
@@ -103,11 +84,14 @@ function top88(
         loop += 1
         # FE-Analysis
         sK = [j*((i+Emin)^penal) for i in ((E0-Emin)*xPhys[:]') for j in KE[:]]
-        K = sparse(iK[:],jK[:],sK); K = (K+K')/2
+        K = sparse(iK[:], jK[:], sK)
+        K = (K+K')/2
+
         KK = cholesky(K[freedofs,freedofs])
         U[freedofs] = KK \ F[freedofs]
         
         edM = [convert(Int64,i) for i in edofMat]
+        # vec; set edofMat to Int mat explicitly --> don't need this coenversion
         mat = (U[edM]*KE).*U[edM]
 
         # Objective function and sensitivity analysis
@@ -158,10 +142,37 @@ function top88(
             println("Loop = ", loop, ", Change = ", change ,", c = ", c, ", structural density = ", mean(x))
         end
 
-        loop >= 25 && break       
+        loop >= 1000 && break       
     end
 
     return x, cValues, loop 
+end
+
+
+function prepare_filter(nelx::S, nely::S, rmin::T) where {S <: Integer, T <: AbstractFloat}
+    # Prepare filter
+    iH = ones(nelx*nely*(2*(convert(Int64,ceil(rmin)-1))+1)^2)
+    jH = ones(size(iH))
+    sH = zeros(size(iH))
+    k = 0
+    for i1 = 1:nelx
+        for j1 = 1:nely
+            e1 = (i1-1)*nely+j1
+            for i2 = max(i1-(ceil(rmin)-1),1):min(i1+(ceil(rmin)-1),nelx)
+                for j2 = max(j1-(ceil(rmin)-1),1):min(j1+(ceil(rmin)-1),nely)
+                    e2 = (i2-1)*nely+j2
+                    k += 1
+                    iH[k] = e1
+                    jH[k] = e2
+                    sH[k] = max(0,rmin-sqrt((i1-i2)^2+(j1-j2)^2))
+                end
+            end
+        end
+    end
+    H = sparse(iH,jH,sH)
+    Hs = [sum(H[i,:]) for i = 1:(size(H)[1])]
+
+    return H, Hs
 end
 
 
