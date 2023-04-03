@@ -47,3 +47,15 @@ end
     @test norm(FE(40, 40, ones(40, 40), 1.0) - U) == 0
 
 end
+
+@testset "Single iteration integration tests" begin
+    vars = matread("mat_cases/toph_unit_tests/SINGLE_20_20.mat")
+    x,_,_ = toph(20, 20, 0.4, 3.0, 2.0, false, 1)
+    @test norm(vars["ans"] - x) == 0
+
+    vars = matread("mat_cases/toph_unit_tests/SINGLE_40_40.mat")
+    x,_,_ = toph(40, 40, 0.4, 3.0, 2.0, false, 1)
+    @test norm(vars["ans"] - x) == 0
+
+end
+

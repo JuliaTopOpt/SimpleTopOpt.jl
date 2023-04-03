@@ -1,7 +1,15 @@
 using BenchmarkTools
-using SimpleTopOpt
-
+using SimpleTopOpt.TopH
 io = IOContext(stdout)
+
+# MATLAB R2022B on 2019 Macbook Pro (Intel i9)
+#  20x20 : 0.1474
+#  40x40 : 2.54
+# Julia 1.8.5
+#  20x20 : 0.3187
+#  40x40 : 13.962s (!!!) 
+#    40x40 benchmark kills itself: over 5801952
+
 
 # 20x20
 println("\n -- Benchmarking for 20x20")

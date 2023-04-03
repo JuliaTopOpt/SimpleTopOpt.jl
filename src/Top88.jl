@@ -37,6 +37,7 @@ function top88(
     rmin::T=2.0,
     ft::Bool=true,
     write::Bool=false,
+    loop_max::Int=1000
 ) where {S <: Integer, T <: AbstractFloat}
     # Physical parameters
     E0 = 1; Emin = 1e-9; nu = 0.3;
@@ -63,8 +64,11 @@ function top88(
     jK = reshape(kron(edofMat,ones(1,8))', 64*nelx*nely,1)
     
     # Loads and supports
-    F = sparse([2], [1], [-1], 2*(nely+1)*(nelx+1), 1)
-    U = zeros(2*(nely+1)*(nelx+1),1)
+    # OLD: F = sparse([2], [1], [-1], 2*(nely+1)*(nelx+1), 1)
+    F = spzeros(2*(nely+1)*(nelx+1))
+    F[2,1] = -1
+    U = spzeros(2*(nely+1)*(nelx+1))
+
     fixeddofs = union(1:2:2*(nely+1), [2*(nelx+1)*(nely+1)])
     alldofs = 1:2*(nely+1)*(nelx+1)
     freedofs = setdiff(alldofs, fixeddofs)
@@ -90,9 +94,8 @@ function top88(
         KK = cholesky(K[freedofs,freedofs])
         U[freedofs] = KK \ F[freedofs]
         
-        edM = [convert(Int64,i) for i in edofMat]
-        # vec; set edofMat to Int mat explicitly --> don't need this coenversion
-        mat = (U[edM]*KE).*U[edM]
+        # OLD: edM = [convert(Int64,i) for i in edofMat]
+        mat = (U[edofMat]*KE).*U[edofMat]
 
         # Objective function and sensitivity analysis
         ce = reshape([sum(mat[i,:]) for i = 1:(size(mat)[1])],nely,nelx)
@@ -110,47 +113,24 @@ function top88(
         end
 
         # Optimality criteria update of design variables and physical densities
-        l1 = 0; l2 = 1e9; move = 0.2
-        xnew = zeros(nely, nelx)
-        while (l2-l1)/(l1+l2) > 1e-3
-            lmid = 0.5*(l2+l1)
-            RacBe = sqrt.(-dc./dv/lmid)
-            XB = x.*RacBe
-            for i = 1:nelx
-                for j = 1:nely
-                    xji = x[j,i]
-                    xnew[j,i]= max(0.001,max(xji-move,min(1,min(xji+move,XB[j,i]))))
-                end
-            end  
-            if ft
-                xPhys = xnew
-            else
-                xPhys[:] = (H*xnew[:])./Hs
-            end
-            if sum(xPhys[:]) > volfrac*nelx*nely
-                l1 = lmid
-            else 
-                l2 = lmid 
-            end
-        end
+        # TODO -- probable issue with xPhys not pass by reference?
+        xnew = OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
 
         change = maximum(abs.(x-xnew))
         x = xnew
 
-        if write
-            # Print densities
-            println("Loop = ", loop, ", Change = ", change ,", c = ", c, ", structural density = ", mean(x))
-        end
-
-        loop >= 1000 && break       
+        write && println("Loop = ", loop, ", Change = ", change ,", c = ", c, ", structural density = ", mean(x))
+        loop >= loop_max && break       
     end
 
     return x, cValues, loop 
 end
 
 
+"""
+Prepare filter
+"""
 function prepare_filter(nelx::S, nely::S, rmin::T) where {S <: Integer, T <: AbstractFloat}
-    # Prepare filter
     iH = ones(nelx*nely*(2*(convert(Int64,ceil(rmin)-1))+1)^2)
     jH = ones(size(iH))
     sH = zeros(size(iH))
@@ -175,5 +155,39 @@ function prepare_filter(nelx::S, nely::S, rmin::T) where {S <: Integer, T <: Abs
     return H, Hs
 end
 
+"""
+Optimality criteria update
+"""
+function OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
+    l1 = 0; l2 = 1e9; move = 0.2
+    xnew = zeros(nely, nelx)
+
+    while (l2-l1)/(l1+l2) > 1e-3
+        lmid = 0.5*(l2+l1)
+        RacBe = sqrt.(-dc./dv/lmid)
+        XB = x.*RacBe
+
+        for i = 1:nelx
+            for j = 1:nely
+                xji = x[j,i]
+                xnew[j,i]= max(0.001,max(xji-move,min(1,min(xji+move,XB[j,i]))))
+            end
+        end  
+
+        if ft
+            xPhys = xnew
+        else
+            xPhys[:] = (H*xnew[:])./Hs
+        end
+
+        if sum(xPhys[:]) > volfrac*nelx*nely
+            l1 = lmid
+        else 
+            l2 = lmid 
+        end
+    end
+
+    return xnew
+end
 
 end 

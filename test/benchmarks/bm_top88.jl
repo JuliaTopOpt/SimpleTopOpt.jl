@@ -1,5 +1,6 @@
 using BenchmarkTools
-using SimpleTopOpt
+using SimpleTopOpt.Top88
+io = IOContext(stdout)
 
 # MATLAB R2022B on 2019 Macbook Pro (Intel i9)
 #  4x4   : 0.0009 ≈ 9.0203e-04
@@ -9,8 +10,6 @@ using SimpleTopOpt
 #  4x4   : 0.0043
 #  10x10 : 0.0288
 #  16x16 : 0.1930
-
-io = IOContext(stdout)
 
 # 4x4
 println("\n -- Benchmarking for 4x4")

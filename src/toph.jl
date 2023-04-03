@@ -14,7 +14,7 @@ export FE
 
 A direct, naive Julia port of the `toph` code listing from the 
 """
-function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false)
+function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int=100)
     x = volfrac * ones(nely,nelx)
     loop = 0
     change = 1.
@@ -27,7 +27,11 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false)
         c = 0.
         U = FE(nelx,nely,x,penal)
 
-        KE = lk()
+        KE = [ 2/3 -1/6 -1/3 -1/6
+              -1/6  2/3 -1/6 -1/3
+              -1/3 -1/6  2/3 -1/6
+              -1/6 -1/3 -1/6  2/3 ]
+
         for ely = 1:nely
             for elx = 1:nelx
                 n1 = (nely+1)*(elx-1)+ely
@@ -44,14 +48,16 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false)
         change = maximum(abs.(x-xold))
         
         write && println("Change = ", change, " c = ", c)
-        # loop >= 1000 && break
-        # TODO -- See one iteration diff
-        loop >= 1000 && break
+
+        loop >= loop_max && break
     end
 
     return x, cValues, loop
 end
 
+"""
+Optimality criteria update
+"""
 function OC(nelx,nely,x,volfrac,dc)
     l1 = 0; l2 = 100000; move = 0.2
     xnew = zeros(nely,nelx)
@@ -74,7 +80,6 @@ function OC(nelx,nely,x,volfrac,dc)
             l2 = lmid
         end
     end
-
 
     return xnew
 end
@@ -102,8 +107,14 @@ function check(nelx,nely,rmin,x,dc)
     return dcn
 end
 
+"""
+Finite element implementation
+"""
 function FE(nelx,nely,x,penal)
-    KE = lk()
+    KE = [ 2/3 -1/6 -1/3 -1/6
+          -1/6  2/3 -1/6 -1/3
+          -1/3 -1/6  2/3 -1/6
+          -1/6 -1/3 -1/6  2/3 ]
   
     K = spzeros((nelx+1)*(nely+1), (nelx+1)*(nely+1))
     U = zeros((nely+1)*(nelx+1))
@@ -126,13 +137,6 @@ function FE(nelx,nely,x,penal)
     U[fixeddofs] .= 0
   
     return U
-end
-
-function lk()
-  return [ 2/3 -1/6 -1/3 -1/6
-          -1/6  2/3 -1/6 -1/3
-          -1/3 -1/6  2/3 -1/6
-          -1/6 -1/3 -1/6  2/3 ]
 end
 
 end
