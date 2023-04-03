@@ -22,12 +22,14 @@ using 88 lines of code." By default, this will reproduce the optimized MBB beam 
 - `volfrac::T`: Prescribed volume fraction
 - `penal::T`: The penalization power
 - `rmin::T`: Filter radius divided by the element size
-- `ft::Bool`: Choose between sensitivity (if true) or density filter (if false)
-- `write::Bool`: If true, will write out iteration number, changes, and density
+- `ft::Bool`: Choose between sensitivity (if true) or density filter (if false). Defaults
+    to sensitivity filter.
+- `write::Bool`: If true, will write out iteration number, changes, and density for each
+    iteration. Defaults for false.
+- `loop_max::Int`: Explicitly set the maximum number of iterations. Defaults to 1000.
 
 # Returns
-- `x`: Final material distribution, presented as a matrix
-
+- `Matrix{T}`: Final material distribution, represented as a matrix
 """
 function top88(
     nelx::S=60,
@@ -38,7 +40,7 @@ function top88(
     ft::Bool=true,
     write::Bool=false,
     loop_max::Int=1000
-) where {S <: Integer, T <: AbstractFloat}
+) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
     # Physical parameters
     E0 = 1; Emin = 1e-9; nu = 0.3;
 
@@ -128,7 +130,7 @@ end
 
 
 """
-Prepare filter
+Prepare sensitivity/ density filter
 """
 function prepare_filter(nelx::S, nely::S, rmin::T) where {S <: Integer, T <: AbstractFloat}
     iH = ones(nelx*nely*(2*(convert(Int64,ceil(rmin)-1))+1)^2)
@@ -158,7 +160,16 @@ end
 """
 Optimality criteria update
 """
-function OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
+function OC(
+    nelx::S,
+    nely,
+    x,
+    volfrac,
+    dc::Matrix{T},
+    dv::,
+    xPhys::Matrix{T},
+    ft::Bool
+)
     l1 = 0; l2 = 1e9; move = 0.2
     xnew = zeros(nely, nelx)
 

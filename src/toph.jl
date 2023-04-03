@@ -10,20 +10,46 @@ export check
 export FE
 
 """
-    toph(nelx, nely, volfrac, penal, rmin, ft)
+    toph(nelx, nely, volfrac, penal, rmin, write, loop_max)
 
-A direct, naive Julia port of the `toph` code listing from the 
+A direct, naive Julia port of the `toph` code listing from "Topology Optimization"
+by Martin Bendsøe and Ole Sigmund.
+
+# Arguments
+- `nelx::S`: Number of elements in the horizontal direction
+- `nely::S`: Number of elements in the vertical direction
+- `volfrac::T`: Prescribed volume fraction
+- `penal::T`: The penalization power
+- `rmin::T`: Filter radius divided by the element size
+- `write::Bool`: If true, will write out iteration number, changes, and density
+    for each iteration. Defaults to false.
+- `loop_max::Int`: Explicitly set the maximum number of iterations. Defaults to 1000.
+
+# Returns
+- `Matrix{T}`: Final material distribution, represented as a matrix.
 """
-function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int=100)
+function toph(
+    nelx::S,
+    nely::S,
+    volfrac::T,
+    penal::T,
+    rmin::T,
+    write::Bool=false, 
+    loop_max::Int=100
+) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
+    # Initialization
     x = volfrac * ones(nely,nelx)
     loop = 0
     change = 1.
     dc = zeros(nely,nelx)
 
+    # Start iteration
     while change > 0.01
         loop += 1
         xold = x
         c = 0.
+
+        # FE Analysis
         U = FE(nelx,nely,x,penal)
 
         KE = [ 2/3 -1/6 -1/3 -1/6
@@ -31,6 +57,7 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int
               -1/3 -1/6  2/3 -1/6
               -1/6 -1/3 -1/6  2/3 ]
 
+        # Objective function/ sensitivity analysis
         for ely = 1:nely
             for elx = 1:nelx
                 n1 = (nely+1)*(elx-1)+ely
@@ -42,11 +69,16 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int
             end
         end
 
+        # Sensitivity filtering 
         dc = check(nelx,nely,rmin,x,dc)
+        # Design update by optimality criteria method
         x  = OC(nelx,nely,x,volfrac,dc)
-        change = maximum(abs.(x-xold))
-        
-        write && println("Change = ", change, " c = ", c)
+
+        # Print out results if desired
+        if write
+            change = maximum(abs.(x-xold))
+            println("Change = ", change, " c = ", c)
+        end
 
         loop >= loop_max && break
     end
@@ -55,9 +87,28 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int
 end
 
 """
+    OC(nelx, nely, x, volfrac, dc)
+
 Optimality criteria update
+
+# Arguments
+- `nelx::S`: Number of elements in the horizontal direction
+- `nely::S`: Number of elements in the vertical direction
+- `x::Matrix{T}`: Current material distribution
+- `volfrac::T`: Prescribed volume fraction
+- `dc::Matrix{T}`: Sensitivity filter
+
+# Returns
+- `Matrix{T}`: Updated material distribution
+
 """
-function OC(nelx,nely,x,volfrac,dc)
+function OC(
+    nelx::S,
+    nely::S,
+    x::Matrix{T},
+    volfrac::T,
+    dc::Matrix{T}
+) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
     l1 = 0; l2 = 100000; move = 0.2
     xnew = zeros(nely,nelx)
 
@@ -83,7 +134,27 @@ function OC(nelx,nely,x,volfrac,dc)
     return xnew
 end
 
-function check(nelx,nely,rmin,x,dc)
+"""
+    check(nelx, nely, rmin, x, dc)
+
+Mesh independency filter
+
+# Arguments
+- `nelx::S`: Number of elements in the horizontal direction
+- `nely::S`: Number of elements in the vertical direction
+- `rmin::T`: Sensitivity filter radius divided by element size
+- `x::Matrix{T}`: Current material distribution
+- `dc::Matrix{T}`: Compliance derivatives
+
+# Returns
+- `Matrix{T}`: Updated dc
+"""
+function check(nelx::S,
+    nely::S,
+    rmin::T,
+    x::Matrix{T},
+    dc::Matrix{T}
+) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
     dcn=zeros(nely,nelx)
 
     for i = 1:nelx
@@ -107,9 +178,25 @@ function check(nelx,nely,rmin,x,dc)
 end
 
 """
+    FE(nelx, nely, x, penal)
+
 Finite element implementation
+
+# Arguments
+- `nelx::S`: Number of elements in the horizontal direction
+- `nely::S`: Number of elements in the vertical direction
+- `x::Matrix{T}`: Current material distribution
+- `penal::T`: The penalization power
+
+# Returns
+- `Matrix{T}`: Differential equation solution U
 """
-function FE(nelx,nely,x,penal)
+function FE(
+    nelx::S,
+    nely::S,
+    x::Matrix{T},
+    penal::T
+) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
     KE = [ 2/3 -1/6 -1/3 -1/6
           -1/6  2/3 -1/6 -1/3
           -1/3 -1/6  2/3 -1/6
