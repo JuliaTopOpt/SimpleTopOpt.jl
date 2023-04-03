@@ -19,7 +19,6 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int
     loop = 0
     change = 1.
     dc = zeros(nely,nelx)
-    cValues = []
 
     while change > 0.01
         loop += 1
@@ -42,7 +41,7 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int
                 dc[ely,elx] = -0.999*penal*(x[ely,elx])^(penal-1)*Ue'*KE*Ue
             end
         end
-        push!(cValues,c)
+
         dc = check(nelx,nely,rmin,x,dc)
         x  = OC(nelx,nely,x,volfrac,dc)
         change = maximum(abs.(x-xold))
@@ -52,7 +51,7 @@ function toph(nelx, nely, volfrac, penal, rmin, write::Bool=false, loop_max::Int
         loop >= loop_max && break
     end
 
-    return x, cValues, loop
+    return x
 end
 
 """

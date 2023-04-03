@@ -4,13 +4,16 @@ using Test
 using LinearAlgebra
 using Statistics
 
+"""
+Integration test suite for TopH
+"""
 
 @testset "40x40 Comparison" begin
     # First comparison on 40x40
     vars = matread("mat_cases/toph_40_40_04_3_12.mat")
     x3 = vars["x"]
 
-    x3h,_,_ = toph(40, 40, 0.4, 3.0, 1.2)
+    x3h = toph(40, 40, 0.4, 3.0, 1.2)
 
     @test size(x3h) == size(x3)
 
@@ -27,7 +30,7 @@ end
     vars = matread("mat_cases/toph_20_20_04_3_12.mat")
     x4 = vars["ans"]
 
-    x4h,_,_ = toph(20, 20, 0.4, 3.0, 1.2)
+    x4h = toph(20, 20, 0.4, 3.0, 1.2)
 
     @test size(x4h) == size(x4)
 

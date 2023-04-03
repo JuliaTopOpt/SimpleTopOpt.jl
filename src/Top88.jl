@@ -6,6 +6,8 @@ using SparseArrays
 using Statistics
 
 export top88
+export prepare_filter
+export OC
 
 """
     top88(nelx, nely, volfrac, penal, rmin, ft)
@@ -25,8 +27,6 @@ using 88 lines of code." By default, this will reproduce the optimized MBB beam 
 
 # Returns
 - `x`: Final material distribution, presented as a matrix
-- `cValues`
-- `loop`: The final iteration count
 
 """
 function top88(
@@ -123,7 +123,7 @@ function top88(
         loop >= loop_max && break       
     end
 
-    return x, cValues, loop 
+    return x
 end
 
 
@@ -170,7 +170,7 @@ function OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
         for i = 1:nelx
             for j = 1:nely
                 xji = x[j,i]
-                xnew[j,i]= max(0.001,max(xji-move,min(1,min(xji+move,XB[j,i]))))
+                xnew[j,i]= max(0.000,max(xji-move,min(1,min(xji+move,XB[j,i]))))
             end
         end  
 

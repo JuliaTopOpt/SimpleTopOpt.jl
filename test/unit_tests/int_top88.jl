@@ -4,12 +4,15 @@ using Test
 using LinearAlgebra
 using Statistics
 
+"""
+Integration test suite for Top88
+"""
 
 @testset "60x40 Integration Suite" begin
     # First comparison on 60x40
     vars = matread("mat_cases/top88_60_40_04_3_2_1.mat")
     x1 = vars["x"]
-    x1h,_,_ = top88(60, 40, 0.4, 3.0, 2.0, true, false)
+    x1h = top88(60, 40, 0.4, 3.0, 2.0, true, false)
 
     @test size(x1h) == size(x1)
     ss = size(x1h)
@@ -24,7 +27,7 @@ end
     # Second comparison on 30x30
     vars = matread("mat_cases/top88_30_30_04_3_2_1.mat")
     x2 = vars["ans"]
-    x2h,_,_ = top88(30, 30, 0.4, 3.0, 2.0, true, false)
+    x2h = top88(30, 30, 0.4, 3.0, 2.0, true, false)
 
     @test size(x2h) == size(x2)
     ss = size(x2h)

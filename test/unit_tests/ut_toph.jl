@@ -3,6 +3,10 @@ using SimpleTopOpt.TopH
 using MAT
 using LinearAlgebra
 
+"""
+TopH Unit Test Suite
+"""
+
 @testset "Cases for OC" begin
 
     vars_1 = matread("mat_cases/toph_unit_tests/OC_20_20_04.mat")
@@ -17,6 +21,12 @@ using LinearAlgebra
     xnew = vars_3["ans"]
     @test norm(OC(40, 40, 2*ones(40, 40), 0.1, zeros(40,40)) - xnew) == 0
 
+    vars_nt = matread("mat_cases/toph_unit_tests/OC_nontrivial.mat")
+    vars_comp = matread("mat_cases/toph_unit_tests/CHECK_nontrivial.mat")
+    xnew = vars_nt["ans"]
+    dnc = vars_comp["ans"]
+    @test norm(OC(20, 20, 0.5 * ones(20, 20), 0.5, dnc) - xnew) == 0
+
 end
 
 @testset "Cases for check" begin
@@ -29,6 +39,12 @@ end
     dnc = vars_2["ans"]
     @test norm(check(40, 40, 0.5, ones(40, 40), ones(40, 40)) - dnc) == 0
 
+    # Stepping through the 20x20 case.
+    vars_in = matread("mat_cases/toph_unit_tests/CHECK_dc_INPUT.mat")
+    dc = vars_in["dc"]
+    vars_comp = matread("mat_cases/toph_unit_tests/CHECK_nontrivial.mat")
+    dnc = vars_comp["ans"]
+    @test norm(check(20, 20, 2.0, 0.5 * ones(20,20), dc) - dnc) == 0
 
 end
 
@@ -46,15 +62,20 @@ end
     U = vars_40_1["ans"]
     @test norm(FE(40, 40, ones(40, 40), 1.0) - U) == 0
 
+    vars = matread("mat_cases/toph_unit_tests/FE_nontrivial.mat")
+    U = vars["ans"]
+    @test norm(FE(20, 20, 0.5 * ones(20, 20), 3.0) - U) == 0
+
 end
 
 @testset "Single iteration integration tests" begin
+
     vars = matread("mat_cases/toph_unit_tests/SINGLE_20_20.mat")
-    x,_,_ = toph(20, 20, 0.4, 3.0, 2.0, false, 1)
+    x = toph(20, 20, 0.4, 3.0, 2.0, false, 1)
     @test norm(vars["ans"] - x) == 0
 
     vars = matread("mat_cases/toph_unit_tests/SINGLE_40_40.mat")
-    x,_,_ = toph(40, 40, 0.4, 3.0, 2.0, false, 1)
+    x = toph(40, 40, 0.4, 3.0, 2.0, false, 1)
     @test norm(vars["ans"] - x) == 0
 
 end
