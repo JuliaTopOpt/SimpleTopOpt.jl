@@ -1,4 +1,3 @@
-
 module Top88
 
 using LinearAlgebra
@@ -169,7 +168,7 @@ function OC(
     dv,
     xPhys::Matrix{T},
     ft::Bool
-)
+) where {S <: Integer, T <: AbstractFloat}
     l1 = 0; l2 = 1e9; move = 0.2
     xnew = zeros(nely, nelx)
 
