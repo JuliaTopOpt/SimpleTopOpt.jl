@@ -36,7 +36,7 @@ function toph(
     rmin::T,
     write::Bool=false, 
     loop_max::Int=100
-) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
+) where {S <: Integer, T <: AbstractFloat}
     # Initialization
     x = volfrac * ones(nely,nelx)
     loop = 0
@@ -108,7 +108,7 @@ function OC(
     x::Matrix{T},
     volfrac::T,
     dc::Matrix{T}
-) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
+) where {S <: Integer, T <: AbstractFloat}
     l1 = 0; l2 = 100000; move = 0.2
     xnew = zeros(nely,nelx)
 
@@ -154,7 +154,7 @@ function check(nelx::S,
     rmin::T,
     x::Matrix{T},
     dc::Matrix{T}
-) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
+) where {S <: Integer, T <: AbstractFloat}
     dcn=zeros(nely,nelx)
 
     for i = 1:nelx
@@ -196,12 +196,12 @@ function FE(
     nely::S,
     x::Matrix{T},
     penal::T
-) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
+) where {S <: Integer, T <: AbstractFloat}
     KE = [ 2/3 -1/6 -1/3 -1/6
           -1/6  2/3 -1/6 -1/3
           -1/3 -1/6  2/3 -1/6
           -1/6 -1/3 -1/6  2/3 ]
-  
+
     K = spzeros((nelx+1)*(nely+1), (nelx+1)*(nely+1))
     U = zeros((nely+1)*(nelx+1))
     F = zeros((nely+1)*(nelx+1))
@@ -213,15 +213,15 @@ function FE(
             K[edof,edof] += (0.001+0.999*x[ely,elx]^penal)*KE
         end
     end
-  
+
     F .= 0.01
     fixeddofs = Int64(nely/2+1-(nely/20)):Int64(nely/2+1+(nely/20))
     alldofs = 1:(nely+1)*(nelx+1)
     freedofs = setdiff(alldofs,fixeddofs)
-  
+
     U[freedofs] = K[freedofs, freedofs] \ F[freedofs]
     U[fixeddofs] .= 0
-  
+
     return U
 end
 

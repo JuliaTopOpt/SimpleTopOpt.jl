@@ -40,7 +40,7 @@ function top88(
     ft::Bool=true,
     write::Bool=false,
     loop_max::Int=1000
-) -> Matrix{T} where {S <: Integer, T <: AbstractFloat}
+) where {S <: Integer, T <: AbstractFloat}
     # Physical parameters
     E0 = 1; Emin = 1e-9; nu = 0.3;
 
