@@ -5,8 +5,20 @@ using SparseArrays
 using Statistics
 
 export top88
-export prepare_filter
-export OC
+
+# Problem parameters
+# SIMP penalization power
+const penal = 3.0
+# Sensitivity/ density filter radius divided by element size
+const rmin = 2.0
+
+# Physical parameters
+# Young's modulus (for the solid material)
+const E0 = 1
+# Minimum value for Young's modulus for the modified SIMP law
+const Emin = 1e-9
+# Poisson's ratio
+const nu = 0.3
 
 """
     top88(nelx, nely, volfrac, penal, rmin, ft)
@@ -19,8 +31,6 @@ using 88 lines of code." By default, this will reproduce the optimized MBB beam 
 - `nelx::S`: Number of elements in the horizontal direction
 - `nely::S`: Number of elements in the vertical direction
 - `volfrac::T`: Prescribed volume fraction
-- `penal::T`: The penalization power
-- `rmin::T`: Filter radius divided by the element size
 - `ft::Bool`: Choose between sensitivity (if true) or density filter (if false). Defaults
     to sensitivity filter.
 - `write::Bool`: If true, will write out iteration number, changes, and density for each
@@ -34,15 +44,10 @@ function top88(
     nelx::S=60,
     nely::S=20,
     volfrac::T=0.5,
-    penal::T=3.0,
-    rmin::T=2.0,
     ft::Bool=true,
     write::Bool=false,
     loop_max::Int=1000
 ) where {S <: Integer, T <: AbstractFloat}
-    # Physical parameters
-    E0 = 1; Emin = 1e-9; nu = 0.3;
-
     # Prepare finite element analysis
     A11 = [12  3 -6 -3;  3 12  3  0; -6  3 12 -3; -3  0 -3 12]
     A12 = [-6 -3  0  3; -3 -6 -3 -6;  0 -3 -6  3;  3 -6  3 -6]
