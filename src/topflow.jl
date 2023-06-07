@@ -77,13 +77,63 @@ function topflow(
     ND = copy(EN)
     ND[fixedDofs, fixedDofs] = 0.0
     EN -= ND
+    # Vectors for free dofs
+    alldofs = 1:doftot
+    freedofs = setdiff(alldofs, fixedDofs)
 
     ### INITIALIZATION
     # Solution vector
-    S = zeros(doftot, 1)
+    S = zeros((doftot, 1))
     dS = copy(S)
     L = copy(S)
+    S[fixedDofs] = DIR[fixedDofs]
+    # Design field
+    xPhys = xinit * ones(nely, nelx)
+    # Counters
+    loop = 0
+    loopcont = 0
+    nlittot = 0
+    chcnt = 0
+    # Change
+    change = Inf
+    objOld = Inf
+    # Continuation
+    qastep = 1
+    qa = qavec[1]
+    # Vectorized constants
+    dxv = FC.dx * ones(1, neltot)
+    dyv = FC.dy * ones(1, neltot)
+    muv = mu * ones(1, neltot)
+    rhov = rho * ones(1, neltot)
 
+    # Print out problem information
+    println("=========================================================")
+    println(
+        "      Problem number:" *
+        String(problemtype) *
+        " - Reynolds number: " *
+        String(PC.Renum),
+    )
+    println("=========================================================")
+
+    # Start iteration
+    # destime = tic; ittime = tic 
+    # TODO: ^^ TIMING -- just do benchmarking instead?
+    while loop <= SOP.maxiter
+        # TODO
+        # if plotdes 
+        # 
+        # end
+
+        # Greyscale indicator
+        Md = 100 * full(4 * sum(xPhys .* (1 - xPhys)) / FC.neltot)
+
+        # Material interpolation
+        alpha = alphamin + (alphamax - alphamin) * (1 .- xPhys) ./ (1 .+ qa * xPhys)
+        dalpha =
+            (qa * (alphamax - alphamin) * (xPhys .- 1)) ./ (xPhys * qa .+ 1) .^ 2 -
+            (alphamax - alphamin) ./ (xPhys * qa .+ 1)
+    end
 
     return 0
 end
@@ -282,6 +332,21 @@ mutable struct Problem2Container{S,T} where {S<:AbstractMatrix,T<:AbstractFloat}
         throw(ArgumentError("TO BE DONE"))
     end
 end
+
+
+function NLNS(TEMP)
+    """
+    Non-linear Newton Solver
+    """
+
+    normR = 1
+    nlit = 0
+    fail = -1
+    # TODO timing
+    # nltime = tic
+
+end
+
 
 
 
