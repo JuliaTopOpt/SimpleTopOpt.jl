@@ -1,32 +1,43 @@
+using MAT
 using SimpleTopOpt
 using Test
-using TopOpt
 
+"""
+Unit test runner
+"""
 
-@testset "Bogus" begin
-    @test 1+1 == 2
-    @test 2+2 != 2
-    @test 1.0 isa Real
+@testset "Top88 Suite" begin
+
+    @testset "Unit tests" begin
+        include("unit_tests/ut_top88.jl")
+    end
+
+    @testset "Integration" begin
+        include("unit_tests/int_top88.jl")
+    end
+ 
 end
 
-@testset "ForcingTopOptPrecompileEtc" begin
-    # geso.jl example
-    E = 1.0 # Young’s modulus
-    v = 0.3 # Poisson’s ratio
-    f = 1.0; # downward force
+@testset "TopH Suite" begin
 
-    nels = (160, 40)
-    problem = HalfMBB(Val{:Linear}, nels, (1.0, 1.0), E, v, f)
+    @testset "Unit tests" begin
+        include("unit_tests/ut_toph.jl")
+    end
 
-    solver = FEASolver(Direct, problem; xmin=0.01, penalty=TopOpt.PowerPenalty(3.0))
+    @testset "Integration" begin
+        include("unit_tests/int_toph.jl")
+    end
 
-    comp = Compliance(solver)
-    volfrac = Volume(solver)
-    sensfilter = SensFilter(solver; rmin=4.0)
-    geso = GESO(comp, volfrac, 0.5, sensfilter)
+end
 
-    x0 = ones(length(solver.vars))
-    result = geso(x0)
+@testset "Benchmarking" begin
 
-    println("Made it to the end")
+    @testset "top88" begin
+        include("benchmarks/bm_top88.jl")
+    end
+
+    @testset "toph" begin
+        include("benchmarks/bm_toph.jl")
+    end
+
 end
