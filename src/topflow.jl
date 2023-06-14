@@ -38,6 +38,8 @@ function topflow(
     nely::S = 30,
 ) where {T<:AbstractFloat,S<:Integer}
 
+
+    # TODO -- error check the physical parameters and so on
 end
 
 """

@@ -45,7 +45,7 @@ struct BrinkmanPenalizationParamters <: ParameterContainer
     alphamax::Float64
     alphamin::Float64
 
-    function BrinkmanPenalizationParamters(mu::Float64 = 1e0)
+    function BrinkmanPenalizationParamters(mu::Float64)
         new(2.5 * mu / (0.01^2), 2.5 * mu / (100^2))
     end
 end
@@ -130,15 +130,77 @@ struct TopflowDomain
     end
 end
 
-struct TopflowContinuation
+"""
+Topflow continuation strategy
+"""
+struct TopflowContinuation <: ParameterContainer
+    ainit::Float64
+    qinit::Float64
+    qavec::Matrix{Float64}
+    qanum::Int64
+    conit::Int64
 
+    """
+    Constructor
+    """
     function TopflowContinuation(
         mu::Float64,
-        xinit::Float64,
+        volfrac::Float64,
         bkman::BrinkmanPenalizationParamters,
+        conit::Int64 = 50,
     )
 
+        ainit = 2.5 * mu / (0.1^2)
 
+        qinit =
+            (-volfrac * (bkman.alphamax - bkman.alphamin) - ainit + bkman.alphamax) /
+            (volfrac * (ainit - bkman.alphamin))
+        qavec = qinit ./ [1 2 10 20]
+        qanum = length(qavec)
+
+        new(ainit, qinit, qavec, qanum, conit)
+
+    end
+end
+
+"""
+Topflow optimization and Newton solver parameters
+"""
+struct TopflowOptNSParams <: ParameterContainer
+
+    maxiter::Int64
+    mvlim::Float64
+    # plotdes -- TODO: this is just a plotting utility switch
+    chlim::Float64
+    chnum::Int64
+
+    # Newton Solver Parameters
+    nltol::Float64
+    nlmax::Int64
+    # plotres -- TODO: this is just a plotting utility switch
+
+    # TODO -- export options?
+
+    """
+    Constructor
+    """
+    function TopflowOptNSParams(
+        maxiter::Int64,
+        mvlim::Float64,
+        chlim::Float64,
+        chnum::Int64,
+        nltol::Float64,
+        nlmax::Int64,
+    )
+        # TODO: assertions on positivty/ non-negativity, etc.
+        @assert maxiter > 0
+        @assert mvlim > 0
+        @assert chlim > 0
+        @assert chnum > 0
+        @assert nltol > 0
+        @assert nlmax > 0
+
+        new(maxiter, mvlim, chlim, chnum, nltol, nlmax)
     end
 end
 
@@ -177,7 +239,7 @@ struct TopflowFEA
         jR = ones(12 * neltot, 1)
         jE = repeat(1:neltot, 12, 1)
 
-        new{T,S}(
+        new(
             dx,
             dy,
             nodx,
@@ -200,11 +262,7 @@ struct TopflowFEA
 
 
     end
-
-
 end
-
-
 
 
 
