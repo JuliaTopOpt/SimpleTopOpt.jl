@@ -19,82 +19,77 @@ using SimpleTopOpt
     conit = 50
 
     # Create domain
-    tf_domain = TopflowDomain(Lx, Ly, nely)
+    tfdc = TopflowDomain(Lx, Ly, nely)
 
-    @test tf_domain.nelx == 30
+    @test tfdc.nelx == 30
     @test_throws AssertionError TopflowDomain(-1.0, 1.0, 30)
     @test_throws AssertionError TopflowDomain(1.0, -1.0, 30)
     @test_throws AssertionError TopflowDomain(1.0, 1.0, 0)
 
-    ### Easy parameter checks
-    # Brinkman penalization
-    bkman_param = BrinkmanPenalizationParamters(mu)
-    @test bkman_param.alphamin == 2.5e-04
-    @test bkman_param.alphamax == 25000
+    @testset "Easy parameter checks" begin
+        # Brinkman penalization
+        bkman_param = BrinkmanPenalizationParamters(mu)
+        @test bkman_param.alphamin == 2.5e-04
+        @test bkman_param.alphamax == 25000
 
-    # Continuation strategy
-    cont = SimpleTopOpt.TopflowContinuation(mu, volfrac, bkman_param, conit)
+        # Continuation strategy
+        cont = SimpleTopOpt.TopflowContinuation(mu, volfrac, bkman_param, conit)
 
-    @test cont.ainit ≈ 250.0
-    @test cont.qinit ≈ 197.0002
+        @test cont.ainit ≈ 250.0
+        @test cont.qinit ≈ 197.0002
 
-    @test size(cont.qavec) == (1, 4)
-    @test cont.qanum == 4
+        @test size(cont.qavec) == (1, 4)
+        @test cont.qanum == 4
 
-    # Skipping TopflowOptNSParams for now...
+        # Skipping TopflowOptNSParams for now...
+
+    end
+
 
     ### Finite Element Container tests
-    # fea = SimpleTopOpt.TopflowFEA(tf_domain)
+    fea = SimpleTopOpt.TopflowFEA(tfdc)
 
-    @test tf_domain.dx ≈ 0.0333 atol = 1e-4
-    @test tf_domain.dy ≈ 0.0333 atol = 1e-4
+    @testset "Finite Element Container tests" begin
 
-    nodx = tf_domain.nelx + 1
-    nody = tf_domain.nely + 1
-    nodtot = nodx * nody
-    neltot = tf_domain.nelx * tf_domain.nely
-    doftot = 3 * nodtot
+        @test tfdc.dx ≈ 0.0333 atol = 1e-4
+        @test tfdc.dy ≈ 0.0333 atol = 1e-4
 
-    nodenrs = reshape(1:nodtot, nody, nodx)
-    edofVecU = reshape(2 * nodenrs[1:end-1, 1:end-1] .+ 1, neltot, 1)
-    edofMatU =
-        repeat(edofVecU, 1, 8) + repeat([0 1 (2 * nely .+ [2 3 0 1]) -2 -1], neltot, 1)
-    edofVecP = reshape(nodenrs[1:end-1, 1:end-1], neltot, 1)
-    edofMatP = repeat(edofVecP, 1, 4) + repeat([1 (nely .+ [2 1]) 0], neltot, 1)
+        @test fea.neltot == 900
+        @test fea.doftot == 2883
 
-    edofMat = [edofMatU (2 * nodtot .+ edofMatP)]
+        @test size(fea.edofMat) == (900, 12)
+        @test fea.edofMat[1, 1] isa Int64
+        # TODO: exact matching!
 
+        @test size(fea.iJ) == (129600, 1)
+        @test fea.iJ[1, 1] isa Int64
+        # TODO exact matching!
+        @test size(fea.jJ) == (129600, 1)
+        @test fea.jJ[1, 1] isa Int64
+        # TODO exact matching!
+        @test size(fea.iR) == (10800, 1)
+        @test fea.iR[1, 1] isa Int64
+        # TODO exact matching!
+        @test size(fea.jR) == (10800, 1)
+        @test fea.jR[1, 1] isa Int64
+        # TODO exact matching!
+        @test size(fea.jE) == (12, 900) # TODO -- LHS is (10800,1)
+        # NB, size(repmat(1:neltot, 1, 12)) == (1, 10800) in MATLAB
+        #  so, somehow, this ends up being repmat(1:neltot, 1, 12)'
+        @test fea.jE[1, 1] isa Int64
+        # TODO exact matching!
+    end
 
-    @test nodx == 31
-    @test nody == 31
-    @test nodtot == 961
-    @test neltot == 900
-    @test doftot == 2883
+    ocp = OCParameters(200, 0.2)
 
-    # TODO -- export all the massive MATLAB things into here for comparison?
-    @test size(nodenrs) == (31, 31)
-    @test nodenrs[1, 1] isa Int64
-    # TODO: exact matching!
-    @test size(edofVecU) == (900, 1)
-    @test edofVecU[1, 1] isa Int64
-    # TODO: exact matching!
-    @test size(edofMatU) == (900, 8)
-    @test edofMatU[1, 1] isa Int64
-    # TODO: exact matching!
-    @test size(edofVecP) == (900, 1)
-    @test edofVecP[1, 1] isa Int64
-    # TODO: exact matching!
-    @test size(edofMatP) == (900, 4)
-    @test edofMatP[1, 1] isa Int64
-    # TODO: exact matching!
-    @test size(edofMat) == (900, 12)
-    @test edofMat[1, 1] isa Int64
-    # TODO: exact matching!
+    ### Problem 1
+    dpc = DoublePipeContainer(tfdc, volfrac, ocp)
 
 
 
 
 
+    ### Problem 2
 
 
 

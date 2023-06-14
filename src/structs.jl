@@ -208,11 +208,19 @@ end
 Will maintain most of the matrices, etc, required for the finite element state evaluation
 """
 struct TopflowFEA
-    neltot::Int64
+    neltot::Int64   # Total number of elements
     doftot::Int64
-
     nodx::Int64
     nody::Int64
+
+    edofMat::Matrix{Int64}
+
+    iJ::AbstractMatrix
+    jJ::AbstractMatrix
+    iR::AbstractMatrix
+    jR::AbstractMatrix
+    jE::AbstractMatrix
+
 
     function TopflowFEA(tfdc::TopflowDomain)
         """
@@ -226,41 +234,22 @@ struct TopflowFEA
         doftot = 3 * nodtot
 
         nodenrs = reshape(1:nodtot, nody, nodx)
-        edofVecU = reshape(2 * nodenrs[1:end-1, 1:end-1] + 1, neltot, 1)
+        edofVecU = reshape(2 * nodenrs[1:end-1, 1:end-1] .+ 1, neltot, 1)
         edofMatU =
-            repeat(edofVecU, 1, 8) + repeat([0 1 2 * nely + [2 3 0 1] -2 -1], neltot, 1)
+            repeat(edofVecU, 1, 8) +
+            repeat([0 1 (2 * tfdc.nely .+ [2 3 0 1]) -2 -1], neltot, 1)
         edofVecP = reshape(nodenrs[1:end-1, 1:end-1], neltot, 1)
-        edofMatP = repeat(edofVecP, 1, 4) + repeat([1 nely + [2 1] 0], neltot, 1)
-        edofMat = [edofMatU 2 * nodtot + edofMatP]
+        edofMatP = repeat(edofVecP, 1, 4) + repeat([1 (tfdc.nely .+ [2 1]) 0], neltot, 1)
+
+        edofMat = [edofMatU (2 * nodtot .+ edofMatP)]
 
         iJ = reshape(kron(edofMat, ones(12, 1))', 144 * neltot, 1)
         jJ = reshape(kron(edofMat, ones(1, 12))', 144 * neltot, 1)
         iR = reshape(edofMat', 12 * neltot, 1)
         jR = ones(12 * neltot, 1)
-        jE = repeat(1:neltot, 12, 1)
+        jE = repeat(1:neltot, 1, 12)'
 
-        new(
-            dx,
-            dy,
-            nodx,
-            nody,
-            nodtot,
-            neltot,
-            doftot,
-            nodenrs,
-            edofVecU,
-            edofMatU,
-            edofVecP,
-            edofMatP,
-            edofMat,
-            iJ,
-            jJ,
-            iR,
-            jR,
-            jE,
-        )
-
-
+        new(neltot, doftot, nodx, nody, edofMat, iJ, jJ, iR, jR, jE)
     end
 end
 
@@ -276,8 +265,9 @@ Topflow Problem Type 1 -- the double pipe problem
 struct DoublePipeContainer{U} <: TopflowContainer where {U<:OptimizerContainer}
     tfdc::TopflowDomain
     volfrac::Float64
-
     optimizer::U
+
+    Renum::Float64
 
     function DoublePipeContainer(
         tfdc::TopflowDomain,
@@ -286,6 +276,45 @@ struct DoublePipeContainer{U} <: TopflowContainer where {U<:OptimizerContainer}
     ) where {U<:OptimizerContainer}
 
         @assert volfrac > 0.0 && volfrac < 1.0
+
+        fea = TopflowFEA(tfdc)
+
+        if mod(tfdc.nely, 6) > 0
+            throw(ArgumentError("Number of elements in y-dir must be divisible by 6."))
+        elseif tfdc.nely < 30
+            throw(ArgumentError("Number of elements in y-dir must be at least 30."))
+        end
+
+        inletLength = 1 / 6 * nely
+        inlet1 = 1 / 6 * nely + 1
+        inlet2 = 4 / 6 * nely + 1
+        outletLength = 1 / 6 * nely
+        outlet1 = 1 / 6 * nely + 1
+        outlet2 = 4 / 6 * nely + 1
+
+        nodesInlet = [(inlet1:(inlet1+inletLength))' (inlet2:(inlet2+inletLength))']
+        nodesOutlet =
+            (fea.nodx - 1) * fea.nody +
+            [(outlet1:(outlet1+outletLength))' (outlet2:(outlet2+outletLength))']
+        nodesTopBot = [1:nely+1:nodtot nody:nody:nodtot]
+        nodesLefRig = [2:nely (nelx)*nody+2:nodtot-1]
+        fixedDofsTBx = 2 * nodesTopBot - 1
+        fixedDofsTBy = 2 * nodesTopBot
+        fixedDofsLRx = 2 * setdiff(nodesLefRig, [nodesInlet nodesOutlet]) - 1
+        fixedDofsLRy = 2 * nodesLefRig
+        fixedDofsInX = 2 * nodesInlet - 1
+        fixedDofsInY = 2 * nodesInlet
+        fixedDofsOutY = 2 * nodesOutlet
+        fixedDofsOutP = 2 * nodtot + nodesOutlet
+        fixedDofsU = [
+            fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy...
+            fixedDofsInX fixedDofsInY fixedDofsOutY
+        ]
+        fixedDofsP = [fixedDofsOutP]
+        fixedDofs = [fixedDofsU fixedDofsP]
+
+
+
 
         new{U}(tfdc, volfrac, optimizer)
     end
