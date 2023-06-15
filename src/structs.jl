@@ -210,8 +210,10 @@ Will maintain most of the matrices, etc, required for the finite element state e
 struct TopflowFEA
     neltot::Int64   # Total number of elements
     doftot::Int64
+
     nodx::Int64
     nody::Int64
+    nodtot::Int64
 
     edofMat::Matrix{Int64}
 
@@ -249,11 +251,65 @@ struct TopflowFEA
         jR = ones(12 * neltot, 1)
         jE = repeat(1:neltot, 1, 12)'
 
-        new(neltot, doftot, nodx, nody, edofMat, iJ, jJ, iR, jR, jE)
+        new(neltot, doftot, nodx, nody, nodtot, edofMat, iJ, jJ, iR, jR, jE)
     end
 end
 
 
+abstract type TopflowBoundaryConditions end
+
+
+struct DoublePipeBC <: TopflowBoundaryConditions
+    fixedDofs::Any
+    DIR::Any
+
+    """
+    Constructor
+    """
+    function DoublePipeBC(tfdc::TopflowDomain, fea::TopflowFEA, Uin::Float64)
+        if mod(tfdc.nely, 6) > 0
+            throw(ArgumentError("Number of elements in y-dir must be divisible by 6."))
+        elseif tfdc.nely < 30
+            throw(ArgumentError("Number of elements in y-dir must be at least 30."))
+        end
+
+        inletLength = 1 / 6 * tfdc.nely
+        inlet1 = 1 / 6 * tfdc.nely + 1
+        inlet2 = 4 / 6 * tfdc.nely + 1
+        outletLength = 1 / 6 * tfdc.nely
+        outlet1 = 1 / 6 * tfdc.nely + 1
+        outlet2 = 4 / 6 * tfdc.nely + 1
+
+        nodesInlet = [(inlet1:(inlet1+inletLength))' (inlet2:(inlet2+inletLength))']
+        nodesOutlet =
+            (fea.nodx - 1) * fea.nody .+
+            [(outlet1:(outlet1+outletLength))' (outlet2:(outlet2+outletLength))']
+        nodesTopBot = [1:tfdc.nely+1:fea.nodtot fea.nody:fea.nody:fea.nodtot]
+        nodesLefRig = [2:tfdc.nely (tfdc.nelx)*fea.nody+2:fea.nodtot-1]
+        fixedDofsTBx = 2 * nodesTopBot .- 1
+        fixedDofsTBy = 2 * nodesTopBot
+        fixedDofsLRx = 2 * setdiff(nodesLefRig, [nodesInlet nodesOutlet]) .- 1
+        fixedDofsLRy = 2 * nodesLefRig
+        fixedDofsInX = 2 * nodesInlet .- 1
+        fixedDofsInY = 2 * nodesInlet
+        fixedDofsOutY = 2 * nodesOutlet
+        fixedDofsOutP = 2 * fea.nodtot .+ nodesOutlet
+        fixedDofsU = [
+            fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy...
+            fixedDofsInX fixedDofsInY fixedDofsOutY
+        ]
+        fixedDofsP = [fixedDofsOutP]
+        fixedDofs = [fixedDofsU fixedDofsP]
+
+        Uinlet = [-4 * x .^ 2 .+ 4 * x for x in (Uin * (0:inletLength) / inletLength)]
+        DIRU = zeros(fea.nodtot * 2, 1)
+        DIRU[fixedDofsInX] = [Uinlet' Uinlet']
+        DIRP = zeros(fea.nodtot, 1)
+        DIR = [DIRU; DIRP]
+
+        new(fixedDofs, DIR)
+    end
+end
 
 
 
@@ -267,58 +323,83 @@ struct DoublePipeContainer{U} <: TopflowContainer where {U<:OptimizerContainer}
     volfrac::Float64
     optimizer::U
 
+    fea::TopflowFEA
+    bc::DoublePipeBC
+
     Renum::Float64
 
     function DoublePipeContainer(
         tfdc::TopflowDomain,
         volfrac::Float64,
         optimizer::U,
+        Uin::Float64 = 1e0,
+        rho::Float64 = 1e0,
+        mu::Float64 = 1e0,
     ) where {U<:OptimizerContainer}
 
         @assert volfrac > 0.0 && volfrac < 1.0
 
         fea = TopflowFEA(tfdc)
+        bc = DoublePipeBC(tfdc, fea, Uin)
 
-        if mod(tfdc.nely, 6) > 0
-            throw(ArgumentError("Number of elements in y-dir must be divisible by 6."))
-        elseif tfdc.nely < 30
-            throw(ArgumentError("Number of elements in y-dir must be at least 30."))
+        Renum = Uin * (bc.inletLength * Ly / nely) * rho / mu
+
+        new{U}(tfdc, volfrac, optimizer, fea, bc, Renum)
+    end
+end
+
+
+"""
+BCs for problem 2
+"""
+struct PipeBendBC
+    fixedDofs::Any
+    DIR::Any
+
+    """
+    Constructor
+    """
+    function PipeBendBC(tfdc::TopflowDomain, fea::TopflowFEA, Uin::Float64)
+        if (mod(tfdc.nelx, 10) > 0 || mod(tfdc.nely, 10) > 0)
+            throw(ArgumentError("Number of elements must be divisible by 10."))
         end
 
-        inletLength = 1 / 6 * nely
-        inlet1 = 1 / 6 * nely + 1
-        inlet2 = 4 / 6 * nely + 1
-        outletLength = 1 / 6 * nely
-        outlet1 = 1 / 6 * nely + 1
-        outlet2 = 4 / 6 * nely + 1
-
-        nodesInlet = [(inlet1:(inlet1+inletLength))' (inlet2:(inlet2+inletLength))']
-        nodesOutlet =
-            (fea.nodx - 1) * fea.nody +
-            [(outlet1:(outlet1+outletLength))' (outlet2:(outlet2+outletLength))']
-        nodesTopBot = [1:nely+1:nodtot nody:nody:nodtot]
-        nodesLefRig = [2:nely (nelx)*nody+2:nodtot-1]
+        inletLength = 2 / 10 * tfdc.nely
+        inlet1 = 1 / 10 * tfdc.nely + 1
+        outletLength = 2 / 10 * tfdc.nelx
+        outlet1 = 7 / 10 * tfdc.nelx + 1
+        nodesInlet = [inlet1:(inlet1+inletLength)]
+        nodesOutlet = nody * [outlet1:(outlet1+outletLength)]
+        nodesTopBot = [1:tfdc.nely+1:nodtot nody:nody:nodtot]
+        nodesLefRig = [2:tfdc.nely (nodx-1)*nody+2:nodtot-1]
         fixedDofsTBx = 2 * nodesTopBot - 1
-        fixedDofsTBy = 2 * nodesTopBot
-        fixedDofsLRx = 2 * setdiff(nodesLefRig, [nodesInlet nodesOutlet]) - 1
+        fixedDofsTBy = 2 * setdiff(nodesTopBot, nodesOutlet)
+        fixedDofsLRx = 2 * setdiff(nodesLefRig, nodesInlet) - 1
         fixedDofsLRy = 2 * nodesLefRig
         fixedDofsInX = 2 * nodesInlet - 1
         fixedDofsInY = 2 * nodesInlet
-        fixedDofsOutY = 2 * nodesOutlet
+        fixedDofsOutX = 2 * nodesOutlet - 1
         fixedDofsOutP = 2 * nodtot + nodesOutlet
         fixedDofsU = [
             fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy...
-            fixedDofsInX fixedDofsInY fixedDofsOutY
+            fixedDofsInX fixedDofsInY fixedDofsOutX
         ]
         fixedDofsP = [fixedDofsOutP]
         fixedDofs = [fixedDofsU fixedDofsP]
 
+        DIRU = zeros(nodtot * 2, 1)
+        DIRP = zeros(nodtot, 1)
+        Uinlet = [-4 * x .^ 2 .+ 4 * x for x in (Uin * (0:inletLength) / inletLength)]
+        DIRU[fixedDofsInX] = Uinlet'
+        DIR = [DIRU; DIRP]
 
 
+        new(fixedDofs, DIR)
 
-        new{U}(tfdc, volfrac, optimizer)
     end
 end
+
+
 
 """
 Topflow Problem Type 2 -- the pipe bend problem

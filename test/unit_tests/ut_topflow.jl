@@ -85,6 +85,10 @@ using SimpleTopOpt
     ### Problem 1
     dpc = DoublePipeContainer(tfdc, volfrac, ocp)
 
+    @testset "Double Pipe Container construction" begin
+
+        @test dpc.Renum ≈ 0.1667 rtol = 1e-4
+    end
 
 
 
