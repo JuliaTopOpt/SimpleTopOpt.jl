@@ -14,7 +14,7 @@ export topH
 
 export OCParameters
 
-export BrinkmanPenalizationParamters, SIMPParameters
+export BrinkmanPenalizationParameters, SIMPParameters
 
 export TopflowDomain, DoublePipeContainer, PipeBendContainer
 

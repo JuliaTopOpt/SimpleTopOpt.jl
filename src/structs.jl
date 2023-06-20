@@ -41,20 +41,14 @@ end
 """
 Brinkman penalization parameter container
 """
-struct BrinkmanPenalizationParamters <: ParameterContainer
+struct BrinkmanPenalizationParameters <: ParameterContainer
     alphamax::Float64
     alphamin::Float64
 
-    function BrinkmanPenalizationParamters(mu::Float64)
+    function BrinkmanPenalizationParameters(mu::Float64)
         new(2.5 * mu / (0.01^2), 2.5 * mu / (100^2))
     end
 end
-
-
-
-
-
-
 
 ##################################################################################################
 # BEGIN PROBLEM STRUCT DEFINITIONS
@@ -144,13 +138,11 @@ struct TopflowContinuation <: ParameterContainer
     Constructor
     """
     function TopflowContinuation(
-        mu::Float64,
-        volfrac::Float64,
-        bkman::BrinkmanPenalizationParamters,
+        volfrac::Float64, # = 1/3 by default
+        bkman::BrinkmanPenalizationParameters,
         conit::Int64 = 50,
     )
-
-        ainit = 2.5 * mu / (0.1^2)
+        ainit = bkman.alphamax / 100
 
         qinit =
             (-volfrac * (bkman.alphamax - bkman.alphamin) - ainit + bkman.alphamax) /
@@ -217,11 +209,11 @@ struct TopflowFEA
 
     edofMat::Matrix{Int64}
 
-    iJ::AbstractMatrix
-    jJ::AbstractMatrix
-    iR::AbstractMatrix
-    jR::AbstractMatrix
-    jE::AbstractMatrix
+    iJ::Matrix{Int64}
+    jJ::Matrix{Int64}
+    iR::Matrix{Int64}
+    jR::Matrix{Int64}
+    jE::Matrix{Int64}
 
 
     function TopflowFEA(tfdc::TopflowDomain)
@@ -245,23 +237,22 @@ struct TopflowFEA
 
         edofMat = [edofMatU (2 * nodtot .+ edofMatP)]
 
-        iJ = reshape(kron(edofMat, ones(12, 1))', 144 * neltot, 1)
-        jJ = reshape(kron(edofMat, ones(1, 12))', 144 * neltot, 1)
+        iJ = reshape(kron(edofMat, ones(Int64, 12, 1))', 144 * neltot, 1)
+        jJ = reshape(kron(edofMat, ones(Int64, 1, 12))', 144 * neltot, 1)
         iR = reshape(edofMat', 12 * neltot, 1)
         jR = ones(12 * neltot, 1)
-        jE = repeat(1:neltot, 1, 12)'
+        jE = repeat((1:neltot)', 12, 1)
 
         new(neltot, doftot, nodx, nody, nodtot, edofMat, iJ, jJ, iR, jR, jE)
     end
 end
 
-
 abstract type TopflowBoundaryConditions end
 
 
-struct DoublePipeBC <: TopflowBoundaryConditions
-    fixedDofs::Any
-    DIR::Any
+struct DoublePipeBC{T,S} <: TopflowBoundaryConditions
+    fixedDofs::T
+    DIR::S
 
     """
     Constructor
@@ -280,25 +271,34 @@ struct DoublePipeBC <: TopflowBoundaryConditions
         outlet1 = 1 / 6 * tfdc.nely + 1
         outlet2 = 4 / 6 * tfdc.nely + 1
 
-        nodesInlet = [(inlet1:(inlet1+inletLength))' (inlet2:(inlet2+inletLength))']
+        nodesInlet = Int.([(inlet1:(inlet1+inletLength))' (inlet2:(inlet2+inletLength))'])
         nodesOutlet =
             (fea.nodx - 1) * fea.nody .+
-            [(outlet1:(outlet1+outletLength))' (outlet2:(outlet2+outletLength))']
-        nodesTopBot = [1:tfdc.nely+1:fea.nodtot fea.nody:fea.nody:fea.nodtot]
-        nodesLefRig = [2:tfdc.nely (tfdc.nelx)*fea.nody+2:fea.nodtot-1]
+            Int.([(outlet1:(outlet1+outletLength))' (outlet2:(outlet2+outletLength))'])
+
+        # TEMP -- there may be a more succinct way of getting this?
+
+        vec_TopBot = Int.(vcat(1:tfdc.nely+1:fea.nodtot, fea.nody:fea.nody:fea.nodtot))
+        vec_LefRig = Int.(vcat(2:tfdc.nely, (tfdc.nelx)*fea.nody+2:fea.nodtot-1))
+
+        nodesTopBot = reshape(vec_TopBot, 1, length(vec_TopBot))
+        nodesLefRig = reshape(vec_LefRig, 1, length(vec_LefRig))
         fixedDofsTBx = 2 * nodesTopBot .- 1
         fixedDofsTBy = 2 * nodesTopBot
-        fixedDofsLRx = 2 * setdiff(nodesLefRig, [nodesInlet nodesOutlet]) .- 1
+        vec_LRx = 2 * Int.(setdiff(nodesLefRig, [nodesInlet nodesOutlet])) .- 1
+        fixedDofsLRx = reshape(vec_LRx, 1, length(vec_LRx))
         fixedDofsLRy = 2 * nodesLefRig
         fixedDofsInX = 2 * nodesInlet .- 1
         fixedDofsInY = 2 * nodesInlet
         fixedDofsOutY = 2 * nodesOutlet
         fixedDofsOutP = 2 * fea.nodtot .+ nodesOutlet
+
+        # Verified up to this point
+
         fixedDofsU = [
-            fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy...
-            fixedDofsInX fixedDofsInY fixedDofsOutY
+            fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy fixedDofsInX fixedDofsInY fixedDofsOutY
         ]
-        fixedDofsP = [fixedDofsOutP]
+        fixedDofsP = fixedDofsOutP
         fixedDofs = [fixedDofsU fixedDofsP]
 
         Uinlet = [-4 * x .^ 2 .+ 4 * x for x in (Uin * (0:inletLength) / inletLength)]
@@ -307,7 +307,8 @@ struct DoublePipeBC <: TopflowBoundaryConditions
         DIRP = zeros(fea.nodtot, 1)
         DIR = [DIRU; DIRP]
 
-        new(fixedDofs, DIR)
+        # TODO -- replace with explicit types of fixedDofs and DIR
+        new{typeof(fixedDofs),typeof(DIR)}(fixedDofs, DIR)
     end
 end
 
@@ -318,7 +319,7 @@ abstract type TopflowContainer <: ProblemContainer end
 """
 Topflow Problem Type 1 -- the double pipe problem
 """
-struct DoublePipeContainer{U} <: TopflowContainer where {U<:OptimizerContainer}
+struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
     tfdc::TopflowDomain
     volfrac::Float64
     optimizer::U
@@ -352,7 +353,7 @@ end
 """
 BCs for problem 2
 """
-struct PipeBendBC
+struct PipeBendBC <: TopflowBoundaryConditions
     fixedDofs::Any
     DIR::Any
 
@@ -393,9 +394,7 @@ struct PipeBendBC
         DIRU[fixedDofsInX] = Uinlet'
         DIR = [DIRU; DIRP]
 
-
         new(fixedDofs, DIR)
-
     end
 end
 
@@ -404,21 +403,33 @@ end
 """
 Topflow Problem Type 2 -- the pipe bend problem
 """
-struct PipeBendContainer{U} <: TopflowContainer where {U<:OptimizerContainer}
-
-    # fixed degrees of freedom
-    fixedDofs::Int64
-    # Reynolds number
-    Renum::Float64
-    # DIR
-
+struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
+    tfdc::TopflowDomain
+    volfrac::Float64
     optimizer::U
+
+    fea::TopflowFEA
+    bc::DoublePipeBC
+
+    Renum::Float64
 
     function PipeBendContainer(
         fixedDofs::Int64,
         Renum::Float64,
+        tfdc::TopflowDomain,
+        volfrac::Float64,
         optimizer::U,
+        Uin::Float64 = 1e0,
+        rho::Float64 = 1e0,
+        mu::Float64 = 1e0,
     ) where {U<:OptimizerContainer}
+
+        @assert volfrac > 0.0 && volfrac < 1.0
+
+        fea = TopflowFEA(tfdc)
+        bc = PipeBendBC(tfdc, fea, Uin)
+
+        Renum = Uin * (bc.inletLength * Ly / nely) * rho / mu
 
         new{U}(fixedDofs, Renum, optimizer)
     end
