@@ -88,26 +88,51 @@ using MAT
         @test norm(vars["jE"] - fea.jE) ≈ 0
     end
 
-    ocp = OCParameters(200, 0.2)
+    optimizer = OCParameters(200, 0.2)
 
     ### Problem 1
 
-    dpc = SimpleTopOpt.DoublePipeBC(tfdc, fea, Uin)
+    dpbc = SimpleTopOpt.DoublePipeBC(tfdc, fea, Uin)
 
     @testset "Double Pipe BC construction" begin
-
-        @test size(dpc.fixedDofs) == (1, 264)
+        @test size(dpbc.fixedDofs) == (1, 264)
         vars = matread("mat_cases/topflow_unit_tests/DoublePipeBC/fixedDofs_standard.mat")
-        @test norm(vars["fixedDofs"] - dpc.fixedDofs) ≈ 0
+        @test norm(vars["fixedDofs"] - dpbc.fixedDofs) ≈ 0
 
-        @test size(dpc.DIR) == (2883, 1)
+        @test size(dpbc.DIR) == (2883, 1)
         vars = matread("mat_cases/topflow_unit_tests/DoublePipeBC/DIR_standard.mat")
-        @test norm(vars["DIR"] - dpc.DIR) ≈ 0
+        @test norm(vars["DIR"] - dpbc.DIR) ≈ 0
+    end
+
+    dpc = DoublePipeContainer(tfdc, volfrac, optimizer, Uin, rho, mu)
+    @testset "Douple Pipe Container construction" begin
+        @test 1 == 1
+
     end
 
     ### Problem 2
-    @testset "Pipe Bend BC construction" begin
 
+    pbbc = SimpleTopOpt.PipeBendBC(tfdc, fea, Uin)
+
+    @testset "Pipe Bend BC construction" begin
+        @test size(pbbc.fixedDofs) == (1, 254)
+        vars = matread("mat_cases/topflow_unit_tests/PipeBendBC/fixedDofs_standard.mat")
+        @test norm(vars["fixedDofs"] - pbbc.fixedDofs) ≈ 0
+
+        @test size(pbbc.DIR) == (2883, 1)
+        vars = matread("mat_cases/topflow_unit_tests/PipeBendBC/DIR_standard.mat")
+        @test norm(vars["DIR"] - pbbc.DIR) ≈ 0
+
+        @test pbbc.inletLength == 6.0
+    end
+
+    pbc = PipeBendContainer(tfdc, volfrac, optimizer, Uin, rho, mu)
+    @testset "Pipe Bend Container construction" begin
+        @test pbc.Renum ≈ 0.2
+
+        @test_throws AssertionError PipeBendContainer(tfdc, 1.0, optimizer, Uin, rho, mu)
+        @test_throws AssertionError PipeBendContainer(tfdc, -1.0, optimizer, Uin, rho, mu)
+        @test_throws AssertionError PipeBendContainer(tfdc, 0.0, optimizer, Uin, rho, mu)
 
     end
 

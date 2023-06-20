@@ -215,7 +215,6 @@ struct TopflowFEA
     jR::Matrix{Int64}
     jE::Matrix{Int64}
 
-
     function TopflowFEA(tfdc::TopflowDomain)
         """
         Assembles most of the finite element matrix problem.
@@ -250,9 +249,11 @@ end
 abstract type TopflowBoundaryConditions end
 
 
-struct DoublePipeBC{T,S} <: TopflowBoundaryConditions
-    fixedDofs::T
-    DIR::S
+struct DoublePipeBC <: TopflowBoundaryConditions
+    fixedDofs::Matrix{Int64}
+    DIR::Matrix{Float64}
+
+    inletLength::Float64
 
     """
     Constructor
@@ -293,7 +294,6 @@ struct DoublePipeBC{T,S} <: TopflowBoundaryConditions
         fixedDofsOutY = 2 * nodesOutlet
         fixedDofsOutP = 2 * fea.nodtot .+ nodesOutlet
 
-        # Verified up to this point
 
         fixedDofsU = [
             fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy fixedDofsInX fixedDofsInY fixedDofsOutY
@@ -307,8 +307,7 @@ struct DoublePipeBC{T,S} <: TopflowBoundaryConditions
         DIRP = zeros(fea.nodtot, 1)
         DIR = [DIRU; DIRP]
 
-        # TODO -- replace with explicit types of fixedDofs and DIR
-        new{typeof(fixedDofs),typeof(DIR)}(fixedDofs, DIR)
+        new(fixedDofs, DIR, inletLength)
     end
 end
 
@@ -327,6 +326,10 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
     fea::TopflowFEA
     bc::DoublePipeBC
 
+    Uin::Float64
+    rho::Float64
+    mu::Float64
+
     Renum::Float64
 
     function DoublePipeContainer(
@@ -343,7 +346,7 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
         fea = TopflowFEA(tfdc)
         bc = DoublePipeBC(tfdc, fea, Uin)
 
-        Renum = Uin * (bc.inletLength * Ly / nely) * rho / mu
+        Renum = Uin * (bc.inletLength * tfdc.Ly / tfdc.nely) * rho / mu
 
         new{U}(tfdc, volfrac, optimizer, fea, bc, Renum)
     end
@@ -354,8 +357,10 @@ end
 BCs for problem 2
 """
 struct PipeBendBC <: TopflowBoundaryConditions
-    fixedDofs::Any
-    DIR::Any
+    fixedDofs::Matrix{Int64}
+    DIR::Matrix{Float64}
+
+    inletLength::Float64
 
     """
     Constructor
@@ -364,37 +369,61 @@ struct PipeBendBC <: TopflowBoundaryConditions
         if (mod(tfdc.nelx, 10) > 0 || mod(tfdc.nely, 10) > 0)
             throw(ArgumentError("Number of elements must be divisible by 10."))
         end
+        # TODO -- sizes may be problematic; will need to transpose?
 
+        ## DEBUG:
         inletLength = 2 / 10 * tfdc.nely
         inlet1 = 1 / 10 * tfdc.nely + 1
         outletLength = 2 / 10 * tfdc.nelx
         outlet1 = 7 / 10 * tfdc.nelx + 1
-        nodesInlet = [inlet1:(inlet1+inletLength)]
-        nodesOutlet = nody * [outlet1:(outlet1+outletLength)]
-        nodesTopBot = [1:tfdc.nely+1:nodtot nody:nody:nodtot]
-        nodesLefRig = [2:tfdc.nely (nodx-1)*nody+2:nodtot-1]
-        fixedDofsTBx = 2 * nodesTopBot - 1
-        fixedDofsTBy = 2 * setdiff(nodesTopBot, nodesOutlet)
-        fixedDofsLRx = 2 * setdiff(nodesLefRig, nodesInlet) - 1
+        nodesInlet = reshape(Int.(inlet1:(inlet1+inletLength)), 1, Int(inletLength + 1))
+        nodesOutlet =
+            fea.nody *
+            reshape(Int.(outlet1:(outlet1+outletLength)), 1, Int(outletLength + 1))
+        vec_TopBot = Int.(vcat(1:tfdc.nely+1:fea.nodtot, fea.nody:fea.nody:fea.nodtot))
+        vec_LefRig = Int.(vcat(2:tfdc.nely, (fea.nodx-1)*fea.nody+2:fea.nodtot-1))
+        nodesTopBot = reshape(vec_TopBot, 1, length(vec_TopBot))
+        nodesLefRig = reshape(vec_LefRig, 1, length(vec_LefRig))
+
+        # TEMP
+        fixedDofsTBx = 2 * nodesTopBot .- 1
+
+        fixedDofsTBy = 2 * Int.(setdiff(nodesTopBot, nodesOutlet))
+        fixedDofsTBy = reshape(fixedDofsTBy, 1, length(fixedDofsTBy))
+
+        fixedDofsLRx = 2 * Int.(setdiff(nodesLefRig, nodesInlet)) .- 1
+        fixedDofsLRx = reshape(fixedDofsLRx, 1, length(fixedDofsLRx))
+
+
         fixedDofsLRy = 2 * nodesLefRig
-        fixedDofsInX = 2 * nodesInlet - 1
+        fixedDofsInX = 2 * nodesInlet .- 1
         fixedDofsInY = 2 * nodesInlet
-        fixedDofsOutX = 2 * nodesOutlet - 1
-        fixedDofsOutP = 2 * nodtot + nodesOutlet
+        fixedDofsOutX = 2 * nodesOutlet .- 1
+        fixedDofsOutP = 2 * fea.nodtot .+ nodesOutlet
+
+        println("Sizes for problem 2 -- pipe bend")
+        println(size(fixedDofsTBx))
+        println(size(fixedDofsTBy))
+        println(size(fixedDofsLRx))
+        println(size(fixedDofsLRy))
+        println(size(fixedDofsInX))
+        println(size(fixedDofsInY))
+        println(size(fixedDofsOutX))
+        println(size(fixedDofsOutP))
+
         fixedDofsU = [
-            fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy...
-            fixedDofsInX fixedDofsInY fixedDofsOutX
+            fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy fixedDofsInX fixedDofsInY fixedDofsOutX
         ]
-        fixedDofsP = [fixedDofsOutP]
+        fixedDofsP = fixedDofsOutP
         fixedDofs = [fixedDofsU fixedDofsP]
 
-        DIRU = zeros(nodtot * 2, 1)
-        DIRP = zeros(nodtot, 1)
+        DIRU = zeros(fea.nodtot * 2, 1)
+        DIRP = zeros(fea.nodtot, 1)
         Uinlet = [-4 * x .^ 2 .+ 4 * x for x in (Uin * (0:inletLength) / inletLength)]
         DIRU[fixedDofsInX] = Uinlet'
         DIR = [DIRU; DIRP]
 
-        new(fixedDofs, DIR)
+        new(fixedDofs, DIR, inletLength)
     end
 end
 
@@ -409,13 +438,15 @@ struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
     optimizer::U
 
     fea::TopflowFEA
-    bc::DoublePipeBC
+    bc::PipeBendBC
+
+    Uin::Float64
+    rho::Float64
+    mu::Float64
 
     Renum::Float64
 
     function PipeBendContainer(
-        fixedDofs::Int64,
-        Renum::Float64,
         tfdc::TopflowDomain,
         volfrac::Float64,
         optimizer::U,
@@ -429,8 +460,8 @@ struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
         fea = TopflowFEA(tfdc)
         bc = PipeBendBC(tfdc, fea, Uin)
 
-        Renum = Uin * (bc.inletLength * Ly / nely) * rho / mu
+        Renum = Uin * (bc.inletLength * tfdc.Ly / tfdc.nely) * rho / mu
 
-        new{U}(fixedDofs, Renum, optimizer)
+        new{U}(tfdc, volfrac, optimizer, fea, bc, Uin, rho, mu, Renum)
     end
 end
