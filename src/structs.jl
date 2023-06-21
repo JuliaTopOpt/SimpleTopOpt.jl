@@ -320,6 +320,9 @@ Topflow Problem Type 1 -- the double pipe problem
 """
 struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
     tfdc::TopflowDomain
+    tc::TopflowContinuation
+    solver_opts::TopflowOptNSParams # TODO: give this a better name
+    bkman::BrinkmanPenalizationParameters
     volfrac::Float64
     optimizer::U
 
@@ -346,9 +349,17 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
         fea = TopflowFEA(tfdc)
         bc = DoublePipeBC(tfdc, fea, Uin)
 
+        # TODO: fill this in; or have taken as argument
+        solver_opts = Nothing
+
+
+        bkman = BrinkmanPenalizationParameters(mu)
+
+        tc = TopflowContinuation(volfrac, bkman)
+
         Renum = Uin * (bc.inletLength * tfdc.Ly / tfdc.nely) * rho / mu
 
-        new{U}(tfdc, volfrac, optimizer, fea, bc, Renum)
+        new{U}(tfdc, tc, solver_opts, bkman, volfrac, optimizer, fea, bc, Renum)
     end
 end
 
@@ -359,6 +370,9 @@ BCs for problem 2
 struct PipeBendBC <: TopflowBoundaryConditions
     fixedDofs::Matrix{Int64}
     DIR::Matrix{Float64}
+
+    # TEMP
+    fixedDofsTBy::Matrix{Int64}
 
     inletLength::Float64
 
@@ -411,6 +425,13 @@ struct PipeBendBC <: TopflowBoundaryConditions
         println(size(fixedDofsOutX))
         println(size(fixedDofsOutP))
 
+        for i = 1:length(fixedDofsTBy)
+            print(string(i) * ": ")
+            println(fixedDofsTBy[i])
+        end
+
+        println(sum(fixedDofsTBy))
+
         fixedDofsU = [
             fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy fixedDofsInX fixedDofsInY fixedDofsOutX
         ]
@@ -423,7 +444,7 @@ struct PipeBendBC <: TopflowBoundaryConditions
         DIRU[fixedDofsInX] = Uinlet'
         DIR = [DIRU; DIRP]
 
-        new(fixedDofs, DIR, inletLength)
+        new(fixedDofs, DIR, fixedDofsTBy, inletLength)
     end
 end
 
@@ -434,6 +455,9 @@ Topflow Problem Type 2 -- the pipe bend problem
 """
 struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
     tfdc::TopflowDomain
+    tc::TopflowContinuation
+    solver_opts::TopflowOptNSParams # TODO Give this a better name
+
     volfrac::Float64
     optimizer::U
 
@@ -448,6 +472,7 @@ struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
 
     function PipeBendContainer(
         tfdc::TopflowDomain,
+        tc::TopflowContinuation,
         volfrac::Float64,
         optimizer::U,
         Uin::Float64 = 1e0,
@@ -462,6 +487,6 @@ struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
 
         Renum = Uin * (bc.inletLength * tfdc.Ly / tfdc.nely) * rho / mu
 
-        new{U}(tfdc, volfrac, optimizer, fea, bc, Uin, rho, mu, Renum)
+        new{U}(tfdc, tc, volfrac, optimizer, fea, bc, Uin, rho, mu, Renum)
     end
 end
