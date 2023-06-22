@@ -115,12 +115,16 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         RHS = sparse(iR, jR, sR)
         RHS[fixedDofs] .= 0
         sJ = JAC(dxv, dyv, muv, rhov, alpha', S[edofMat'])
+
+        # TODO: Check size
         J = sparse(iJ, jJ, sJ)
         J = (ND' * J * ND + EN)
         L = J' \ RHS
 
         # Compute sensitivities
         sR = dRESdg(dxv, dyv, muv, rhov, alpha', dalpha', S[edofMat'])
+
+        # TODO: Check size
         dRdg = sparse(iR, jE, sR)
         dphidg = dPHIdg(dxv, dyv, muv, alpha', dalpha', S[edofMat'])
         sens = reshape(dphidg - L' * dRdg, nely, nelx)
@@ -227,7 +231,6 @@ function newton(nlittot::Int, printout::Bool = false)
             fail += 1
         end
 
-
         # TODO -- what to return?
 
     end
@@ -242,14 +245,36 @@ function newton(nlittot::Int, printout::Bool = false)
         )
     end
 
+    return xPhys
+
 end
 
 
 """
 Optimality Criterion optimization update step
 """
-function OCUpdate()
+function OCUpdate(
+    xPhys::Matrix{Float64},
+    solver_opts::SimpleTopOpt.TopflowOptNSParams,
+    fea::SimpleTopOpt.TopflowFEA,
+)
 
+    xlow = xPhys(:) - mvlim
+    xupp = xPhys(:) + mvlim
+    ocfac = xPhys(:) .* max(1e-10, (-sens(:) ./ dV(:))) .^ (1 / 3)
+    l1 = 0
+    l2 = (1 / (neltot * volfrac) * sum(ocfac))^3
+    while (l2 - l1) / (l1 + l2) > 1e-3
+        lmid = 0.5 * (l2 + l1)
+        xnew(:) = max(0, max(xlow, min(1, min(xupp, ocfac / (lmid^(1 / 3))))))
+        if mean(xnew(:)) > volfrac
+            l1 = lmid
+        else
+            l2 = lmid
+        end
+    end
+
+    return xPhys
 
 end
 
