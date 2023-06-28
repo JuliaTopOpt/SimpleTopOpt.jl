@@ -255,8 +255,8 @@ Optimality Criterion optimization update step
 """
 function OCUpdate(
     xPhys::Matrix{Float64},
-    solver_opts::SimpleTopOpt.TopflowOptNSParams,
-    fea::SimpleTopOpt.TopflowFEA,
+    #solver_opts::SimpleTopOpt.TopflowOptNSParams,
+    #fea::SimpleTopOpt.TopflowFEA,
 )
 
     xlow = xPhys(:) - mvlim
