@@ -1,13 +1,12 @@
 using Symbolics
 using SymbolicUtils
 using LinearAlgebra
+using SymbolicNumericIntegration
 
 """
 TODO -- some script description
 """
 
-const buildJR = true
-const buildPhi = true
 const exportJR = true
 const exportPhi = true
 
@@ -70,41 +69,120 @@ ue = sqrt(u0' * u0)
 τ4 = ρ / α
 τ = (τ1^(-2) + τ3^(-2) + τ4^(-2))^(-1 / 2)
 
+
+#########################################################################
+# NOT VERIFIED BELOW
+#########################################################################
+
 # Loop over tensor weak form to form residual
-if buildJR
-    Ru = zeros(Num, 8, 1)
-    Rp = zeros(Num, 4)
+Ru = zeros(Num, 8, 1)
+Rp = zeros(Num, 4)
 
-    # Momentum equations
-    for g = 1:8
-        for i = 1:2
-            Ru[g] += α * Nu[i, g] * ux[i]                                           # Brinkman term
-            for j = 1:2
-                Ru[g] += μ * dNudx[i, g, j] * (dudx[i, j] + dudx[j, i])            # Viscous term
-                Ru[g] += ρ * Nu[i, g] * ux[j] * dudx[i, j]                       # Convection term
-                Ru[g] += τ * ux[j] * dNudx[i, g, j] * α * ux[i]                  # SUPG Brinkman term
-                for k = 1:2
-                    Ru[g] += τ * ux[j] * dNudx[i, g, j] * ρ * ux[k] * dudx[i, k]  # SUPG convection term
-                end
-                Ru[g] += τ * ux[j] * dNudx[i, g, j] * dpdx[i]                    # SUPG pressure term
+println("Building Ru...")
+# Momentum equations
+for g = 1:8
+    for i = 1:2
+        Ru[g] += α * Nu[i, g] * ux[i]                                           # Brinkman term
+        for j = 1:2
+            Ru[g] += μ * dNudx[i, g, j] * (dudx[i, j] + dudx[j, i])            # Viscous term
+            Ru[g] += ρ * Nu[i, g] * ux[j] * dudx[i, j]                       # Convection term
+            Ru[g] += τ * ux[j] * dNudx[i, g, j] * α * ux[i]                  # SUPG Brinkman term
+            for k = 1:2
+                Ru[g] += τ * ux[j] * dNudx[i, g, j] * ρ * ux[k] * dudx[i, k]  # SUPG convection term
             end
-            Ru[g] -= dNudx[i, g, i] * px                                         # Pressure term
+            Ru[g] += τ * ux[j] * dNudx[i, g, j] * dpdx[i]                    # SUPG pressure term
         end
+        Ru[g] -= dNudx[i, g, i] * px                                         # Pressure term
     end
-
-    # Incompressibility equations
-    for g = 1:4
-        for i = 1:2
-            Rp[g] += Np[1, g] * dudx[i, i]                     # Divergence term
-            Rp[g] += τ / ρ * dNpdx[i, g] * α * ux[i]            # PSPG Brinkman term
-            for j = 1:2
-                Rp[g] += τ * dNpdx[i, g] * ux[j] * dudx[i, j]  # PSPG convection term
-            end
-            Rp[g] += τ / ρ * dNpdx[i, g] * dpdx[i]              # PSPG pressure term
-        end
-    end
-
 end
+
+println("Building Rp...")
+# Incompressibility equations
+for g = 1:4
+    for i = 1:2
+        Rp[g] += Np[1, g] * dudx[i, i]                     # Divergence term
+        Rp[g] += τ / ρ * dNpdx[i, g] * α * ux[i]            # PSPG Brinkman term
+        for j = 1:2
+            Rp[g] += τ * dNpdx[i, g] * ux[j] * dudx[i, j]  # PSPG convection term
+        end
+        Rp[g] += τ / ρ * dNpdx[i, g] * dpdx[i]              # PSPG pressure term
+    end
+end
+
+println("Simplifying Ru and Rp...")
+Ru = simplify(detJ * Ru)
+Rp = simplify(detJ * Rp)
+
+# FToC
+println("Integrating Ru...")
+F = integrate(Ru, ξ; symbolic = true)
+@assert F[2] == 0.0
+@assert F[3] == 0.0
+F = F[1]
+
+F = simplify(
+    SymbolicUtils.substitute(F, Dict([ξ => 1])) -
+    SymbolicUtils.substitute(F, Dict([ξ => -1])),
+)
+F = integrate(F, η; symbolic = true)
+@assert F[2] == 0.0
+@assert F[3] == 0.0
+F = F[1]
+
+Ru = simplify(
+    SymbolicUtils.substitute(F, Dict([η => 1])) -
+    SymbolicUtils.substitute(F, Dict([η => -1])),
+)
+
+println("Integrating Rp...")
+G = integrate(Rp, ξ; symbolic = true)
+@assert G[2] == 0.0
+@assert G[3] == 0.0
+G = G[1]
+
+G = simplify(
+    SymbolicUtils.substitute(G, Dict([ξ => 1])) -
+    SymbolicUtils.substitute(G, Dict([ξ => -1])),
+)
+G = integrate(G, η; symbolic = true)
+@assert G[2] == 0.0
+@assert G[3] == 0.0
+G = G[1]
+
+Rp = simplify(
+    SymbolicUtils.substitute(G, Dict([η => 1])) -
+    SymbolicUtils.substitute(G, Dict([η => -1])),
+)
+
+Re = [Ru; Rp]
+
+# Differentiate
+Je = Symbolics.jacobian(Re, s)
+
+if exportJR
+    JAC = Symbolics.build_function(
+        Je,
+        dx,
+        dy,
+        μ,
+        ρ,
+        α,
+        [u1, u2, u3, u4, u5, u6, u7, u8, p1, p2, p3, p4],
+    )
+    RES = Symbolics.build_function(
+        Re,
+        dx,
+        dy,
+        μ,
+        ρ,
+        α,
+        [u1, u2, u3, u4, u5, u6, u7, u8, p1, p2, p3, p4],
+    )
+
+    write("subroutines/JAC.jl", string(JAC))
+    write("subroutines/RES.jl", string(RES))
+end
+
 
 # Export residual and Jacobian
 

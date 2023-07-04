@@ -4,7 +4,7 @@ using LinearAlgebra
 using SparseArrays
 using FillArrays
 
-import ..TopflowContainer
+import ..TopflowContainer, ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA
 export topflow
 
 
@@ -51,7 +51,7 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
 
     # Change
     change = Inf
-    objOld = Int
+    objOld = Inf
 
     # Continuation
     qastep = 1
@@ -83,7 +83,7 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
             (xPhys * qa .+ 1) .^ 2 .- (bkman.alphamax - bkmin.alphamin) ./ (xPhys * qa .+ 1)
 
         # Newtown solve
-        newton(nlitott)
+        newton(nlittot)       # TODO -- what else does this need, if anything?
 
         # Objective evaluation
 
@@ -255,8 +255,8 @@ Optimality Criterion optimization update step
 """
 function OCUpdate(
     xPhys::Matrix{Float64},
-    #solver_opts::SimpleTopOpt.TopflowOptNSParams,
-    #fea::SimpleTopOpt.TopflowFEA,
+    solver_opts::SimpleTopOpt.TopflowOptNSParams,
+    fea::SimpleTopOpt.TopflowFEA,
 )
 
     xlow = xPhys(:) - mvlim
