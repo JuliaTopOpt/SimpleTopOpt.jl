@@ -6,45 +6,74 @@ using Test
 Unit test runner
 """
 
-@testset "Topflow Suite" begin
-    include("unit_tests/ut_topflow.jl")
+all_tests = (isempty(ARGS) || "all" in ARGS)
+
+
+if all_tests || "topflow" in ARGS
+    println("Beginning topflow suite...")
+
+    @testset "Topflow Suite" begin
+        # include("unit_tests/ut_topflow.jl")
+    end
+
+    @testset "Topflow symbolic suite" begin
+        include("../src/topflow_subroutines/analyticElement.jl")
+        analyticElement(false, false, test=true)
+    end
+
+    println("Finished Topflow Suite...")
+end
+
+if all_tests || "top88" in ARGS
+    println("Beginning Top88 suite...")
+
+    @testset "Top88 Suite" begin
+
+        @testset "Unit tests" begin
+            include("unit_tests/ut_top88.jl")
+        end
+
+        @testset "Integration" begin
+            include("unit_tests/int_top88.jl")
+        end
+    end
+
+    println("Finished Top88 suite...")
 end
 
 
+if all_tests || "toph" in ARGS
+    println("Beginning TopH suite...")
 
+    @testset "TopH Suite" begin
 
-@testset "Top88 Suite" begin
+        @testset "Unit tests" begin
+            include("unit_tests/ut_toph.jl")
+        end
 
-    @testset "Unit tests" begin
-        #include("unit_tests/ut_top88.jl")
+        @testset "Integration" begin
+            include("unit_tests/int_toph.jl")
+        end
     end
 
-    @testset "Integration" begin
-        #include("unit_tests/int_top88.jl")
-    end
-
+    println("Finished TopH suite...")
 end
 
-@testset "TopH Suite" begin
 
-    @testset "Unit tests" begin
-        #include("unit_tests/ut_toph.jl")
+if all_tests || "benchmark" in ARGS
+    
+    println("Beginning benchmarks...")
+
+    @testset "Benchmarking" begin
+
+        @testset "top88" begin
+            include("benchmarks/bm_top88.jl")
+        end
+
+        @testset "toph" begin
+            include("benchmarks/bm_toph.jl")
+        end
     end
 
-    @testset "Integration" begin
-        #include("unit_tests/int_toph.jl")
-    end
-
-end
-
-@testset "Benchmarking" begin
-
-    @testset "top88" begin
-        #include("benchmarks/bm_top88.jl")
-    end
-
-    @testset "toph" begin
-        #include("benchmarks/bm_toph.jl")
-    end
-
+    println("Finished benchmarks...")
 end

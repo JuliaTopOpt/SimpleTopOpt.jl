@@ -311,8 +311,6 @@ struct DoublePipeBC <: TopflowBoundaryConditions
     end
 end
 
-
-
 abstract type TopflowContainer <: ProblemContainer end
 
 """
@@ -350,8 +348,7 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
         bc = DoublePipeBC(tfdc, fea, Uin)
 
         # TODO: fill this in; or have taken as argument
-        solver_opts = Nothing
-
+        solver_opts = Nothing       
 
         bkman = BrinkmanPenalizationParameters(mu)
 
@@ -425,7 +422,7 @@ struct PipeBendBC <: TopflowBoundaryConditions
         println(size(fixedDofsOutX))
         println(size(fixedDofsOutP))
 
-        for i = 1:length(fixedDofsTBy)
+        for i in eachindex(fixedDofsTBy)
             print(string(i) * ": ")
             println(fixedDofsTBy[i])
         end
