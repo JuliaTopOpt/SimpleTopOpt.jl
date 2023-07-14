@@ -18,7 +18,7 @@ if all_tests || "topflow" in ARGS
 
     @testset "Topflow symbolic suite" begin
         include("../src/topflow_subroutines/analyticElement.jl")
-        analyticElement(false, false, test=true)
+        analyticElement(false, false, test = true)
     end
 
     println("Finished Topflow Suite...")
@@ -61,7 +61,7 @@ end
 
 
 if all_tests || "benchmark" in ARGS
-    
+
     println("Beginning benchmarks...")
 
     @testset "Benchmarking" begin

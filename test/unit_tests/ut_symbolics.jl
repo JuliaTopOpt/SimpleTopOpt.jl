@@ -1,11 +1,39 @@
 using Test
 using SimpleTopOpt
-using SimpleTopOpt.TopFlow
+using SimpleTopOpt.TopFlow.analyticElement:
+    Symbols, shapeFunctionDerivatives, shapeFunctionsAndMatrices,
+    nodalCoordsTransforms, nodalDofs, stabilizationParameters,
+    residualFormation, doubleIntegrate, formJe, computePhi,
+    computePartialJeDF, computePartialPhiDF, computePartialPhiSF,
+    jacobianConstruction
+using SymbolicUtils
+using LinearAlgebra
 
-vars = Topflow.Symbols()
+vars = Symbols()
+xv, yv, Np, Nu = shapeFunctionsAndMatrices(vars)
+x, y = nodalCoordsTransforms(vars, xv, yv, Np)
+iJ, detJ, J = jacobianConstruction(vars, x, y)
 
-xv, yv, Np, Nu = TopFlow.analyticElement
-
+ρ = vars.ρ
+μ = vars.μ
+α = vars.α
+dα = vars.dα
+ξ = vars.ξ
+η = vars.η
+dx = vars.dx
+dy = vars.dy
+u1 = vars.u1
+u2 = vars.u2
+u3 = vars.u3
+u4 = vars.u4
+u5 = vars.u5
+u6 = vars.u6
+u7 = vars.u7
+u8 = vars.u8
+p1 = vars.p1
+p2 = vars.p2
+p3 = vars.p3
+p4 = vars.p4
 
 @testset "Jacobian construction" begin
     @test size(J) == (2, 2)
@@ -28,6 +56,7 @@ xv, yv, Np, Nu = TopFlow.analyticElement
     @test sdJ == 1 / 4
 end
 
+dNpdx, dNudx = shapeFunctionDerivatives(iJ, Np, Nu, vars)
 
 @testset "Test dNpdx and dNudx" begin
     Np_1 = SymbolicUtils.substitute(dNpdx, Dict([ξ => 1, η => 1, dx => 1, dy => 1]))
@@ -49,13 +78,14 @@ end
     @test norm(Nu_2[2, :, 2] - [0 -1 / 2 0 -1 / 2 0 1 / 2 0 1 / 2]') == 0
 end
 
+
+s, ux, px, dudx, dpdx = nodalDofs(vars, Nu, Np, dNudx, dNpdx)
+
+
 @testset "Test ux, px, dudx, and dpdx" begin
 
     @test size(s) == (12,)
-    @test size(p) == (4,)
 
-
-    println("{TEST -- Testing ux, px, dudx, and dpdx}")
     @test norm(
         SymbolicUtils.substitute(
             ux,
@@ -145,36 +175,19 @@ end
     @test norm(
         (SymbolicUtils.substitute(
             dpdx,
-            Dict([
-                p1 => 1,
-                p2 => 1,
-                p3 => 1,
-                p4 => 1,
-                ξ => 1,
-                η => 1,
-                dx => 1,
-                dy => 1,
-            ]),
+            Dict([p1 => 1, p2 => 1, p3 => 1, p4 => 1, ξ => 1, η => 1, dx => 1, dy => 1]),
         )) - [0; 0],
     ) == 0
 
     @test norm(
         (SymbolicUtils.substitute(
             dpdx,
-            Dict([
-                p1 => 1,
-                p2 => 2,
-                p3 => 3,
-                p4 => 4,
-                ξ => 5,
-                η => 6,
-                dx => 7,
-                dy => 8,
-            ]),
+            Dict([p1 => 1, p2 => 2, p3 => 3, p4 => 4, ξ => 5, η => 6, dx => 7, dy => 8]),
         )) - [-6 / 7; -3 / 8],
     ) == 0
 end
 
+τ, ue = stabilizationParameters(vars, ux)
 
 @testset "Stabilization parameters" begin
 
@@ -220,9 +233,9 @@ end
             dy => 13,
         ]),
     ) - (3130 / √(13086113)) ≈ 0 atol = 1e-12
-
-
 end
+
+Ru, Rp = residualFormation(vars, τ, Nu, ux, dNudx, dudx, dpdx, px, Np, dNpdx, detJ)
 
 @testset "Testing simplified Ru and Rp" begin
     @test norm(
@@ -327,6 +340,8 @@ end
 
 end
 
+Ru = doubleIntegrate(Ru, vars)
+Rp = doubleIntegrate(Rp, vars)
 
 @testset "Integrated Ru and Rp" begin
     @test norm(
@@ -396,6 +411,8 @@ end
 end
 
 
+Re = [Ru; Rp]
+Je = formJe(Re, s)
 
 
 @testset "Testing a few Je components" begin
@@ -423,15 +440,11 @@ end
             dy => 1,
         ]),
     )
-    @test (
-        sje[1, 4] - (-(sqrt(41) * ((3555 * sqrt(41)) / 41 - 60)) / 14760 - 3 / 328)
-    ) ≈ 0 atol = 1e-12
+    @test (sje[1, 4] - (-(sqrt(41) * ((3555 * sqrt(41)) / 41 - 60)) / 14760 - 3 / 328)) ≈ 0 atol =
+        1e-12
     #@test (sje[4,1] - (-(sqrt(41) * ((3555 * sqrt(41))/ 41 - 60))/14760 - 3/328)) ≈ 0 atol=1e-12
     #@test (sje[12,3] - ((sqrt(41)*(6*sqrt(41) + 6))/2952 - sqrt(41)/492)) ≈ 0 atol=1e-12
     #@test (sje[5,9] - (-(41^(1/2)*(30*41^(1/2) + 150))/14760)) ≈ 0 atol=1e-12
-
-
-
 
     sje = SymbolicUtils.substitute(
         Je,
@@ -478,7 +491,7 @@ end
     ) ≈ 0 atol = 1e-12
 end
 
-
+ϕ = computePhi(vars, ux, dudx)
 
 @testset "Testing ϕ pre-integration" begin
     @test SymbolicUtils.substitute(
@@ -522,7 +535,7 @@ end
     ) - 9 / 2 == 0
 end
 
-
+ϕ = doubleIntegrate(ϕ, vars)
 
 @testset "Testing integrated ϕ" begin
     @test SymbolicUtils.substitute(
@@ -567,6 +580,9 @@ end
 
 end
 
+dphidg = computePartialPhiDF(vars, ϕ)
+dphids = computePartialPhiSF(ϕ, s)
+drdg = computePartialJeDF(vars, Re)
 
 @testset "Testing dphidg" begin
     @test SymbolicUtils.substitute(
@@ -611,7 +627,3 @@ end
         ]),
     ) - 100 == 0
 end
-
-
-
-

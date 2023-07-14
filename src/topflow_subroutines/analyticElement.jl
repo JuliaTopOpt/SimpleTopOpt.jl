@@ -13,40 +13,38 @@ derivatives and functions of interest to TopFlow.
 
 struct Symbols
     """ Contains all symbols involved in the computations """
-    ρ
-    μ
-    α
-    dα
-    ξ
-    η
-    dx
-    dy
-    u1
-    u2
-    u3
-    u4
-    u5
-    u6
-    u7
-    u8
-    p1
-    p2
-    p3
-    p4
+    ρ::Num
+    μ::Num
+    α::Num
+    dα::Num
+    ξ::Num
+    η::Num
+    dx::Num
+    dy::Num
+    u1::Num
+    u2::Num
+    u3::Num
+    u4::Num
+    u5::Num
+    u6::Num
+    u7::Num
+    u8::Num
+    p1::Num
+    p2::Num
+    p3::Num
+    p4::Num
 
     function Symbols()
         """ Constructor """
         @variables ρ μ α dα ξ η dx dy
         @variables u1 u2 u3 u4 u5 u6 u7 u8 p1 p2 p3 p4
 
-        new(
-            ρ,μ,α,dα,ξ,η,dx,dy,u1,u2,u3,u4,u5,u6,u7,u8,p1,p2,p3,p4
-        )
+        new(ρ, μ, α, dα, ξ, η, dx, dy, u1, u2, u3, u4, u5, u6, u7, u8, p1, p2, p3, p4)
     end
 end
 
 
-function generation(exportJR::Bool = true, exportPhi::Bool = true)
+function generation()
     """ Runs through symbolic computations; generates and exports code """
     vars = Symbols()
     DIR_PATH = @__DIR__
@@ -59,7 +57,7 @@ function generation(exportJR::Bool = true, exportPhi::Bool = true)
     x, y = nodalCoordsTransforms(vars, xv, yv, Np)
 
     # Jacobian
-    iJ, detJ, J = jacobianConstruction(vars, x, y)
+    iJ, detJ, _ = jacobianConstruction(vars, x, y)
 
     # Derivatives of shape functions
     dNpdx, dNudx = shapeFunctionDerivatives(iJ, Np, Nu, vars)
@@ -67,7 +65,7 @@ function generation(exportJR::Bool = true, exportPhi::Bool = true)
     # Nodal DOFs
     s, ux, px, dudx, dpdx = nodalDofs(vars, Nu, Np, dNudx, dNpdx)
     # Stabilization parameters τ
-    τ, ue, u0, h = stabilizationParameters(vars, ux)
+    τ, _ = stabilizationParameters(vars, ux)
 
     # Loop over the tensor weak form to form residual
     Ru, Rp = residualFormation(vars, τ, Nu, ux, dNudx, dudx, dpdx, px, Np, dNpdx, detJ)
@@ -82,31 +80,50 @@ function generation(exportJR::Bool = true, exportPhi::Bool = true)
     Je = formJe(Re, s)
 
     # Export residual and Jacobian
-    if exportJR
-        JAC = Symbolics.build_function(
-            Je,
-            vars.dx,
-            vars.dy,
-            vars.μ,
-            vars.ρ,
-            vars.α,
-            [vars.u1, vars.u2, vars.u3, vars.u4, vars.u5, vars.u6, vars.u7, vars.u8, vars.p1, vars.p2, vars.p3, vars.p4],
-        )
-        RES = Symbolics.build_function(
-            Re,
-            vars.dx,
-            vars.dy,
-            vars.μ,
-            vars.ρ,
-            vars.α,
-            [vars.u1, vars.u2, vars.u3, vars.u4, vars.u5, vars.u6, vars.u7, vars.u8, vars.p1, vars.p2, vars.p3, vars.p4],
-        )
-
-        println("{exportJR} -- writing out JAC and RES")
-
-        write(DIR_PATH * "/JAC.jl", string(JAC))
-        write(DIR_PATH * "/RES.jl", string(RES))
-    end
+    JAC = Symbolics.build_function(
+        Je,
+        vars.dx,
+        vars.dy,
+        vars.μ,
+        vars.ρ,
+        vars.α,
+        [
+            vars.u1,
+            vars.u2,
+            vars.u3,
+            vars.u4,
+            vars.u5,
+            vars.u6,
+            vars.u7,
+            vars.u8,
+            vars.p1,
+            vars.p2,
+            vars.p3,
+            vars.p4,
+        ],
+    )
+    RES = Symbolics.build_function(
+        Re,
+        vars.dx,
+        vars.dy,
+        vars.μ,
+        vars.ρ,
+        vars.α,
+        [
+            vars.u1,
+            vars.u2,
+            vars.u3,
+            vars.u4,
+            vars.u5,
+            vars.u6,
+            vars.u7,
+            vars.u8,
+            vars.p1,
+            vars.p2,
+            vars.p3,
+            vars.p4,
+        ],
+    )
 
     # Optimization part
     # Compute ϕ
@@ -121,55 +138,97 @@ function generation(exportJR::Bool = true, exportPhi::Bool = true)
     # Compute partial derivative of residual wrt. design field
     drdg = computePartialJeDF(vars, Re)
 
-    if exportPhi
-        PHI = Symbolics.build_function(
-            ϕ,
-            vars.dx,
-            vars.dy,
-            vars.μ,
-            vars.α,
-            [vars.u1, vars.u2, vars.u3, vars.u4, vars.u5, vars.u6, vars.u7, vars.u8, vars.p1, vars.p2, vars.p3, vars.p4],
-        )
-        dPHIdg = Symbolics.build_function(
-            dphidg,
-            vars.dx,
-            vars.dy,
-            vars.μ,
-            vars.α,
-            vars.dα,
-            [vars.u1, vars.u2, vars.u3, vars.u4, vars.u5, vars.u6, vars.u7, vars.u8, vars.p1, vars.p2, vars.p3, vars.p4],
-        )
-        dPHIds = Symbolics.build_function(
-            dphids[1:8],
-            vars.dx,
-            vars.dy,
-            vars.μ,
-            vars.α,
-            [vars.u1, vars.u2, vars.u3, vars.u4, vars.u5, vars.u6, vars.u7, vars.u8, vars.p1, vars.p2, vars.p3, vars.p4],
-        )
+    PHI = Symbolics.build_function(
+        ϕ,
+        vars.dx,
+        vars.dy,
+        vars.μ,
+        vars.α,
+        [
+            vars.u1,
+            vars.u2,
+            vars.u3,
+            vars.u4,
+            vars.u5,
+            vars.u6,
+            vars.u7,
+            vars.u8,
+            vars.p1,
+            vars.p2,
+            vars.p3,
+            vars.p4,
+        ],
+    )
+    dPHIdg = Symbolics.build_function(
+        dphidg,
+        vars.dx,
+        vars.dy,
+        vars.μ,
+        vars.α,
+        vars.dα,
+        [
+            vars.u1,
+            vars.u2,
+            vars.u3,
+            vars.u4,
+            vars.u5,
+            vars.u6,
+            vars.u7,
+            vars.u8,
+            vars.p1,
+            vars.p2,
+            vars.p3,
+            vars.p4,
+        ],
+    )
+    dPHIds = Symbolics.build_function(
+        dphids[1:8],
+        vars.dx,
+        vars.dy,
+        vars.μ,
+        vars.α,
+        [
+            vars.u1,
+            vars.u2,
+            vars.u3,
+            vars.u4,
+            vars.u5,
+            vars.u6,
+            vars.u7,
+            vars.u8,
+            vars.p1,
+            vars.p2,
+            vars.p3,
+            vars.p4,
+        ],
+    )
 
-        write(DIR_PATH * "/PHI.jl", string(PHI))
-        write(DIR_PATH * "/dPHIdg.jl", string(dPHIdg))
-        write(DIR_PATH * "/dPHIds.jl", string(dPHIds))
-    end
-    if exportJR
-        dRESdg = Symbolics.build_function(
-            drdg,
-            vars.dx,
-            vars.dy,
-            vars.μ,
-            vars.ρ,
-            vars.α,
-            vars.dα,
-            [vars.u1, vars.u2, vars.u3, vars.u4, vars.u5, vars.u6, vars.u7, vars.u8, vars.p1, vars.p2, vars.p3, vars.p4],
-        )
+    dRESdg = Symbolics.build_function(
+        drdg,
+        vars.dx,
+        vars.dy,
+        vars.μ,
+        vars.ρ,
+        vars.α,
+        vars.dα,
+        [
+            vars.u1,
+            vars.u2,
+            vars.u3,
+            vars.u4,
+            vars.u5,
+            vars.u6,
+            vars.u7,
+            vars.u8,
+            vars.p1,
+            vars.p2,
+            vars.p3,
+            vars.p4,
+        ],
+    )
 
-        write(DIR_PATH * "/dRESdg.jl", string(dRESdg))
-    end
-
-    return
+    return JAC, RES, PHI, dPHIdg, dPHIds, dRESdg
 end
-
 
 
 function shapeFunctionsAndMatrices(vars::Symbols)
@@ -236,7 +295,7 @@ function nodalDofs(vars, Nu, Np, dNudx, dNpdx)
 end
 
 function stabilizationParameters(vars, ux)
-    # Stabilisation parameters
+    """ Stabilisation parameter τ calculation """
     h = sqrt(vars.dx^2 + vars.dy^2)
     u0 = SymbolicUtils.substitute(ux, Dict([vars.ξ => 0, vars.η => 0]))
     ue = sqrt(u0' * u0)
@@ -245,10 +304,11 @@ function stabilizationParameters(vars, ux)
     τ4 = vars.ρ / vars.α
     τ = (τ1^(-2) + τ3^(-2) + τ4^(-2))^(-1 / 2)
 
-    return τ, ue, u0, h
+    return τ, ue
 end
 
 function residualFormation(vars, τ, Nu, ux, dNudx, dudx, dpdx, px, Np, dNpdx, detJ)
+    """ Forms Ru and Rp/ loop over tensor weak form """
     Ru = zeros(Num, 8, 1)
     Rp = zeros(Num, 4)
 
@@ -294,7 +354,7 @@ function doubleIntegrate(expression, vars)
     @assert F[3] == 0
     F = simplify(
         SymbolicUtils.substitute(F[1], Dict([vars.ξ => 1])) -
-        SymbolicUtils.substitute(F[1], Dict([vars.ξ => -1]))
+        SymbolicUtils.substitute(F[1], Dict([vars.ξ => -1])),
     )
 
     G = integrate(expression, vars.η; symbolic = true)
@@ -302,16 +362,17 @@ function doubleIntegrate(expression, vars)
     @assert G[3] == 0
     G = simplify(
         SymbolicUtils.substitute(G[1], Dict([vars.η => 1])) -
-        SymbolicUtils.substitute(G[1], Dict([vars.η => -1]))
+        SymbolicUtils.substitute(G[1], Dict([vars.η => -1])),
     )
 
     return G
 end
 
 function formJe(Re, s)
+    """ Form Jacobian """
     Je = zeros(Num, 12, 12)
     for b = 1:12
-        Je[:,b] = Symbolics.derivative(Re, s[b])
+        Je[:, b] = Symbolics.derivative(Re, s[b])
     end
 
     return Je
@@ -319,10 +380,11 @@ end
 
 
 function computePhi(vars::Symbols, ux, dudx)
-    ϕ = (1/2) * vars.α * ux' * ux
+    """ Compute objective functional """
+    ϕ = (1 / 2) * vars.α * ux' * ux
     for i = 1:2
         for j = 1:2
-            ϕ += (1/2) * vars.μ * dudx[i,j] * (dudx[i,j] + dudx[j,i])
+            ϕ += (1 / 2) * vars.μ * dudx[i, j] * (dudx[i, j] + dudx[j, i])
         end
     end
 
@@ -330,10 +392,13 @@ function computePhi(vars::Symbols, ux, dudx)
 end
 
 function computePartialPhiDF(vars, ϕ)
+    """ Computes the partial of the objective function wrt. design field """
+
     return simplify(Symbolics.derivative(ϕ, vars.α) * vars.dα)
 end
 
 function computePartialPhiSF(ϕ, s)
+    """ Computes the partial of the objective function wrt. state field """
     dphids = zeros(Num, 12)
     for a = 1:12
         dphids[a] = simplify(Symbolics.derivative(ϕ, s[a]))
@@ -343,14 +408,12 @@ function computePartialPhiSF(ϕ, s)
 end
 
 function computePartialJeDF(vars, Re)
-    return simplify( Symbolics.derivative(Re, vars.α) * vars.dα)
+    """ Computes the partial of the residual wrt. the design field """
+    return simplify(Symbolics.derivative(Re, vars.α) * vars.dα)
 end
 
 end
-
 
 if abspath(PROGRAM_FILE) == @__FILE__
     analyticElement.generation(false, false)
 end
-
-

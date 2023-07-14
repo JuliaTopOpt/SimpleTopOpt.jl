@@ -1,6 +1,6 @@
 using MAT
 using SimpleTopOpt
-using Test   
+using Test
 using LinearAlgebra
 using Statistics
 
@@ -21,8 +21,8 @@ Integration test suite for TopH
     num_elements = ss[1] * ss[2]
 
     residuals = abs.(x3h - x3)
-    @test (mean(residuals)) ≈ 0 atol=1e-6
-    @test (norm(residuals))/num_elements ≈ 0 atol=1e-6
+    @test (mean(residuals)) ≈ 0 atol = 1e-6
+    @test (norm(residuals)) / num_elements ≈ 0 atol = 1e-6
 end
 
 @testset "20x20 Comparison" begin
@@ -38,6 +38,6 @@ end
     num_elements = ss[1] * ss[2]
 
     residuals = abs.(x4h - x4)
-    @test (mean(residuals)) ≈ 0 atol=1e-6
-    @test (norm(residuals))/num_elements ≈ 0 atol=1e-6
+    @test (mean(residuals)) ≈ 0 atol = 1e-6
+    @test (norm(residuals)) / num_elements ≈ 0 atol = 1e-6
 end

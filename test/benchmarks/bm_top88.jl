@@ -25,4 +25,3 @@ show(io, MIME("text/plain"), b2)
 println("\n -- Benchmarking for 16x16")
 b3 = @benchmark top88(16, 16, 0.4, 3.0, 2.0, true, false)
 show(io, MIME("text/plain"), b3)
-

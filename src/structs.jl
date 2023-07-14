@@ -348,7 +348,7 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
         bc = DoublePipeBC(tfdc, fea, Uin)
 
         # TODO: fill this in; or have taken as argument
-        solver_opts = Nothing       
+        solver_opts = Nothing
 
         bkman = BrinkmanPenalizationParameters(mu)
 

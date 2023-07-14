@@ -18,8 +18,8 @@ Integration test suite for Top88
     ss = size(x1h)
     num_elements = ss[1] * ss[2]
 
-    @test (mean(x1h) - mean(x1)) ≈ 0 atol=1e-10
-    @test (norm(x1h - x1))/num_elements ≈ 0 atol=1e-10
+    @test (mean(x1h) - mean(x1)) ≈ 0 atol = 1e-10
+    @test (norm(x1h - x1)) / num_elements ≈ 0 atol = 1e-10
     @test (norm(x1h - x1)) == 0
 end
 
@@ -33,7 +33,7 @@ end
     ss = size(x2h)
     num_elements = ss[1] * ss[2]
 
-    @test (mean(x2h) - mean(x2)) ≈ 0 atol=1e-10
-    @test (norm(x2h-x2))/num_elements ≈ 0 atol=1e-10
-    @test (norm(x2h-x2)) == 0
+    @test (mean(x2h) - mean(x2)) ≈ 0 atol = 1e-10
+    @test (norm(x2h - x2)) / num_elements ≈ 0 atol = 1e-10
+    @test (norm(x2h - x2)) == 0
 end

@@ -34,49 +34,51 @@ function toph(
     volfrac::T,
     penal::T,
     rmin::T,
-    write::Bool=false, 
-    loop_max::Int=100
-) where {S <: Integer, T <: AbstractFloat}
+    write::Bool = false,
+    loop_max::Int = 100,
+) where {S<:Integer,T<:AbstractFloat}
     # Initialization
-    x = volfrac * ones(nely,nelx)
+    x = volfrac * ones(nely, nelx)
     loop = 0
-    change = 1.
-    dc = zeros(nely,nelx)
+    change = 1.0
+    dc = zeros(nely, nelx)
 
     # Start iteration
     while change > 0.01
         loop += 1
         xold = x
-        c = 0.
+        c = 0.0
 
         # FE Analysis
-        U = FE(nelx,nely,x,penal)
+        U = FE(nelx, nely, x, penal)
 
-        KE = [ 2/3 -1/6 -1/3 -1/6
-              -1/6  2/3 -1/6 -1/3
-              -1/3 -1/6  2/3 -1/6
-              -1/6 -1/3 -1/6  2/3 ]
+        KE = [
+            2/3 -1/6 -1/3 -1/6
+            -1/6 2/3 -1/6 -1/3
+            -1/3 -1/6 2/3 -1/6
+            -1/6 -1/3 -1/6 2/3
+        ]
 
         # Objective function/ sensitivity analysis
         for ely = 1:nely
             for elx = 1:nelx
-                n1 = (nely+1)*(elx-1)+ely
-                n2 = (nely+1)* elx   +ely
-                Ue = U[[n1; n2; n2+1; n1+1]]
+                n1 = (nely + 1) * (elx - 1) + ely
+                n2 = (nely + 1) * elx + ely
+                Ue = U[[n1; n2; n2 + 1; n1 + 1]]
 
-                c += (0.001+0.999*x[ely,elx]^penal)*Ue'*KE*Ue
-                dc[ely,elx] = -0.999*penal*(x[ely,elx])^(penal-1)*Ue'*KE*Ue
+                c += (0.001 + 0.999 * x[ely, elx]^penal) * Ue' * KE * Ue
+                dc[ely, elx] = -0.999 * penal * (x[ely, elx])^(penal - 1) * Ue' * KE * Ue
             end
         end
 
         # Sensitivity filtering 
-        dc = check(nelx,nely,rmin,x,dc)
+        dc = check(nelx, nely, rmin, x, dc)
         # Design update by optimality criteria method
-        x  = OC(nelx,nely,x,volfrac,dc)
+        x = OC(nelx, nely, x, volfrac, dc)
 
         # Print out results if desired
         if write
-            change = maximum(abs.(x-xold))
+            change = maximum(abs.(x - xold))
             println("Change = ", change, " c = ", c)
         end
 
@@ -107,24 +109,26 @@ function OC(
     nely::S,
     x::Matrix{T},
     volfrac::T,
-    dc::Matrix{T}
-) where {S <: Integer, T <: AbstractFloat}
-    l1 = 0; l2 = 100000; move = 0.2
-    xnew = zeros(nely,nelx)
+    dc::Matrix{T},
+) where {S<:Integer,T<:AbstractFloat}
+    l1 = 0
+    l2 = 100000
+    move = 0.2
+    xnew = zeros(nely, nelx)
 
-    while (l2-l1) > 1e-4
-        lmid = 0.5*(l2+l1)
-        RacBe = sqrt.(-dc/lmid)
+    while (l2 - l1) > 1e-4
+        lmid = 0.5 * (l2 + l1)
+        RacBe = sqrt.(-dc / lmid)
         XB = x .* RacBe
 
         for i = 1:nelx
             for j = 1:nely
-                xji = x[j,i]
-                xnew[j,i]= max(0.001,max(xji-move,min(1,min(xji+move,XB[j,i]))))
+                xji = x[j, i]
+                xnew[j, i] = max(0.001, max(xji - move, min(1, min(xji + move, XB[j, i]))))
             end
         end
 
-        if (sum(sum(xnew)) - volfrac*nelx*nely) > 0
+        if (sum(sum(xnew)) - volfrac * nelx * nely) > 0
             l1 = lmid
         else
             l2 = lmid
@@ -149,29 +153,31 @@ Mesh independency filter
 # Returns
 - `Matrix{T}`: Updated dc
 """
-function check(nelx::S,
+function check(
+    nelx::S,
     nely::S,
     rmin::T,
     x::Matrix{T},
-    dc::Matrix{T}
-) where {S <: Integer, T <: AbstractFloat}
-    dcn=zeros(nely,nelx)
+    dc::Matrix{T},
+) where {S<:Integer,T<:AbstractFloat}
+    dcn = zeros(nely, nelx)
 
     for i = 1:nelx
-      for j = 1:nely
-        sum=0.0
+        for j = 1:nely
+            sum = 0.0
 
-        for k = max(i-floor(rmin),1):min(i+floor(rmin),nelx)
-          for l = max(j-floor(rmin),1):min(j+floor(rmin),nely)
-            l = Int64(l); k = Int64(k)
-            fac = rmin-sqrt((i-k)^2+(j-l)^2)
-            sum = sum+max(0,fac)
-            dcn[j,i] += max(0,fac)*x[l,k]*dc[l,k]
-          end
+            for k = max(i - floor(rmin), 1):min(i + floor(rmin), nelx)
+                for l = max(j - floor(rmin), 1):min(j + floor(rmin), nely)
+                    l = Int64(l)
+                    k = Int64(k)
+                    fac = rmin - sqrt((i - k)^2 + (j - l)^2)
+                    sum = sum + max(0, fac)
+                    dcn[j, i] += max(0, fac) * x[l, k] * dc[l, k]
+                end
+            end
+
+            dcn[j, i] = dcn[j, i] / (x[j, i] * sum)
         end
-
-        dcn[j,i] = dcn[j,i]/(x[j,i]*sum)
-      end
     end
 
     return dcn
@@ -191,33 +197,30 @@ Finite element implementation
 # Returns
 - `Matrix{T}`: Differential equation solution U
 """
-function FE(
-    nelx::S,
-    nely::S,
-    x::Matrix{T},
-    penal::T
-) where {S <: Integer, T <: AbstractFloat}
-    KE = [ 2/3 -1/6 -1/3 -1/6
-          -1/6  2/3 -1/6 -1/3
-          -1/3 -1/6  2/3 -1/6
-          -1/6 -1/3 -1/6  2/3 ]
+function FE(nelx::S, nely::S, x::Matrix{T}, penal::T) where {S<:Integer,T<:AbstractFloat}
+    KE = [
+        2/3 -1/6 -1/3 -1/6
+        -1/6 2/3 -1/6 -1/3
+        -1/3 -1/6 2/3 -1/6
+        -1/6 -1/3 -1/6 2/3
+    ]
 
-    K = spzeros((nelx+1)*(nely+1), (nelx+1)*(nely+1))
-    U = zeros((nely+1)*(nelx+1))
-    F = zeros((nely+1)*(nelx+1))
+    K = spzeros((nelx + 1) * (nely + 1), (nelx + 1) * (nely + 1))
+    U = zeros((nely + 1) * (nelx + 1))
+    F = zeros((nely + 1) * (nelx + 1))
     for elx = 1:nelx
-        for ely = 1:nely 
-            n1 = (nely+1)*(elx-1)+ely
-            n2 = (nely+1)* elx   +ely
-            edof = [n1; n2; n2+1; n1+1]
-            K[edof,edof] += (0.001+0.999*x[ely,elx]^penal)*KE
+        for ely = 1:nely
+            n1 = (nely + 1) * (elx - 1) + ely
+            n2 = (nely + 1) * elx + ely
+            edof = [n1; n2; n2 + 1; n1 + 1]
+            K[edof, edof] += (0.001 + 0.999 * x[ely, elx]^penal) * KE
         end
     end
 
     F .= 0.01
-    fixeddofs = Int64(nely/2+1-(nely/20)):Int64(nely/2+1+(nely/20))
+    fixeddofs = Int64(nely / 2 + 1 - (nely / 20)):Int64(nely / 2 + 1 + (nely / 20))
     alldofs = 1:(nely+1)*(nelx+1)
-    freedofs = setdiff(alldofs,fixeddofs)
+    freedofs = setdiff(alldofs, fixeddofs)
 
     U[freedofs] = K[freedofs, freedofs] \ F[freedofs]
     U[fixeddofs] .= 0

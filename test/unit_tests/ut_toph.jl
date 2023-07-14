@@ -11,15 +11,15 @@ TopH Unit Test Suite
 
     vars_1 = matread("mat_cases/toph_unit_tests/OC_20_20_04.mat")
     xnew = vars_1["ans"]
-    @test norm(OC(20, 20, ones(20, 20), 0.4, zeros(20,20)) - xnew) == 0
+    @test norm(OC(20, 20, ones(20, 20), 0.4, zeros(20, 20)) - xnew) == 0
 
     vars_2 = matread("mat_cases/toph_unit_tests/OC_20_20_08.mat")
     xnew = vars_2["ans"]
-    @test norm(OC(20, 20, 2*ones(20, 20), 0.8, zeros(20,20)) - xnew) == 0
+    @test norm(OC(20, 20, 2 * ones(20, 20), 0.8, zeros(20, 20)) - xnew) == 0
 
     vars_3 = matread("mat_cases/toph_unit_tests/OC_40_40_01.mat")
     xnew = vars_3["ans"]
-    @test norm(OC(40, 40, 2*ones(40, 40), 0.1, zeros(40,40)) - xnew) == 0
+    @test norm(OC(40, 40, 2 * ones(40, 40), 0.1, zeros(40, 40)) - xnew) == 0
 
     vars_nt = matread("mat_cases/toph_unit_tests/OC_nontrivial.mat")
     vars_comp = matread("mat_cases/toph_unit_tests/CHECK_nontrivial.mat")
@@ -44,7 +44,7 @@ end
     dc = vars_in["dc"]
     vars_comp = matread("mat_cases/toph_unit_tests/CHECK_nontrivial.mat")
     dnc = vars_comp["ans"]
-    @test norm(check(20, 20, 2.0, 0.5 * ones(20,20), dc) - dnc) == 0
+    @test norm(check(20, 20, 2.0, 0.5 * ones(20, 20), dc) - dnc) == 0
 
 end
 
@@ -79,4 +79,3 @@ end
     @test norm(vars["ans"] - x) == 0
 
 end
-

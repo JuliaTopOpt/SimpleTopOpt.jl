@@ -23,10 +23,11 @@ end
 
     varsH = matread("mat_cases/top88_unit_tests/FILTER_20_20_H.mat")
     varsHs = matread("mat_cases/top88_unit_tests/FILTER_20_20_Hs.mat")
-    Hh = varsH["H"]; Hsh = varsHs["Hs"]
+    Hh = varsH["H"]
+    Hsh = varsHs["Hs"]
     H, Hs = prepare_filter(20, 20, 2.0)
 
-    @test norm(Hh - H)   == 0
+    @test norm(Hh - H) == 0
     @test norm(Hsh - Hs) == 0
 
 end
