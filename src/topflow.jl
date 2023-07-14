@@ -7,6 +7,7 @@ using FillArrays
 import ..TopflowContainer, ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA
 export topflow
 
+include("topflow_subroutines/analyticElement.jl")
 
 """
     `topflow`
@@ -14,7 +15,11 @@ export topflow
 Fluidic topology optimization
 """
 function topflow(problem_container::T, writeout::Bool = false) where {T<:TopflowContainer}
-    #TODO: do I need to error check the physical parameters, etc?
+
+
+    # TODO -- code generation?
+
+    # TODO: do I need to error check the physical parameters, etc?
     tfdc = problem_container.tfdc
     fea = problem_container.fea
     bc = problem_container.bc

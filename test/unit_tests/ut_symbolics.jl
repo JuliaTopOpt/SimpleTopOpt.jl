@@ -2,6 +2,10 @@ using Test
 using SimpleTopOpt
 using SimpleTopOpt.TopFlow
 
+vars = Topflow.Symbols()
+
+xv, yv, Np, Nu = TopFlow.analyticElement
+
 
 @testset "Jacobian construction" begin
     @test size(J) == (2, 2)
