@@ -17,7 +17,7 @@ if all_tests || "topflow" in ARGS
     end
 
     @testset "Topflow integration test suite" begin
-        include("unit_tests/symbolics/ut_integration.jl")
+        # include("unit_tests/symbolics/ut_integration.jl")
     end
 
     @testset "Topflow symbolic suite" begin

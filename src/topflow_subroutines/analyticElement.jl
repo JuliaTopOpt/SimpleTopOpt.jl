@@ -372,9 +372,9 @@ function formJe(Re, s)
     """ Form Jacobian """
     #Je = zeros(Num, 12, 12)
     #for b = 1:12
-        #for k = 1:12
-            #Je[k, b] = Symbolics.derivative(Re[k], s[b]) 
-        #end
+    #for k = 1:12
+    #Je[k, b] = Symbolics.derivative(Re[k], s[b]) 
+    #end
     #end
 
     Je = Symbolics.jacobian(Re, s)
