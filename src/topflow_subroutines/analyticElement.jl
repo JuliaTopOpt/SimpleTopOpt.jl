@@ -357,23 +357,27 @@ function doubleIntegrate(expression, vars)
         SymbolicUtils.substitute(F[1], Dict([vars.ξ => -1])),
     )
 
-    G = integrate(expression, vars.η; symbolic = true)
-    @assert G[2] == 0
-    @assert G[3] == 0
-    G = simplify(
-        SymbolicUtils.substitute(G[1], Dict([vars.η => 1])) -
-        SymbolicUtils.substitute(G[1], Dict([vars.η => -1])),
+    F = integrate(F, vars.η; symbolic = true)
+    @assert F[2] == 0
+    @assert F[3] == 0
+    F = simplify(
+        SymbolicUtils.substitute(F[1], Dict([vars.η => 1])) -
+        SymbolicUtils.substitute(F[1], Dict([vars.η => -1])),
     )
 
-    return G
+    return F
 end
 
 function formJe(Re, s)
     """ Form Jacobian """
-    Je = zeros(Num, 12, 12)
-    for b = 1:12
-        Je[:, b] = Symbolics.derivative(Re, s[b])
-    end
+    #Je = zeros(Num, 12, 12)
+    #for b = 1:12
+        #for k = 1:12
+            #Je[k, b] = Symbolics.derivative(Re[k], s[b]) 
+        #end
+    #end
+
+    Je = Symbolics.jacobian(Re, s)
 
     return Je
 end
@@ -415,5 +419,5 @@ end
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    analyticElement.generation(false, false)
+    analyticElement.generation()
 end

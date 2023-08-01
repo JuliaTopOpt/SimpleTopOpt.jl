@@ -16,8 +16,7 @@ Fluidic topology optimization
 """
 function topflow(problem_container::T, writeout::Bool = false) where {T<:TopflowContainer}
 
-
-    # TODO -- code generation?
+    JAC, RES, PHI, dPHIdg, dPHIds, dRESdg = analyticElement.generation()
 
     # TODO: do I need to error check the physical parameters, etc?
     tfdc = problem_container.tfdc
@@ -81,7 +80,7 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
 
         # Material interpolator
         alpha =
-            bkman.alpgamin +
+            bkman.alphamin +
             (bkman.alphamax - bkman.alphamin) * (1 .- xPhys) ./ (1 .+ qa * xPhys)
         dalpha =
             (qa * (bkman.alphamax - bkman.alphamin) * (xPhys .- 1)) ./

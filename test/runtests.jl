@@ -16,9 +16,12 @@ if all_tests || "topflow" in ARGS
         # include("unit_tests/ut_topflow.jl")
     end
 
+    @testset "Topflow integration test suite" begin
+        include("unit_tests/symbolics/ut_integration.jl")
+    end
+
     @testset "Topflow symbolic suite" begin
-        include("../src/topflow_subroutines/analyticElement.jl")
-        analyticElement(false, false, test = true)
+        include("unit_tests/symbolics/ut_symbolics.jl")
     end
 
     println("Finished Topflow Suite...")
