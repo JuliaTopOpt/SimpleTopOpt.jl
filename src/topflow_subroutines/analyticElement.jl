@@ -349,18 +349,27 @@ end
 
 function doubleIntegrate(expression, vars)
     """ Integrates over the unit square in ξ and η """
-    F = integrate(expression, vars.ξ; symbolic = true)
-    @assert F[2] == 0
-    @assert F[3] == 0
-    F = simplify(
+    F = integrate.(expression, vars.ξ; symbolic = true)
+    G = {}
+    for i in eachindex(F)
+        f = F[i]
+        @assert f[2] == 0
+        @assert f[3] == 0
+        F[i] = f[1]
+    end
+    F = simplify.(
         SymbolicUtils.substitute(F[1], Dict([vars.ξ => 1])) -
         SymbolicUtils.substitute(F[1], Dict([vars.ξ => -1])),
     )
 
-    F = integrate(F, vars.η; symbolic = true)
-    @assert F[2] == 0
-    @assert F[3] == 0
-    F = simplify(
+    F = integrate.(F, vars.η; symbolic = true)
+    for i in eachindex(F)
+        f = F[i]
+        @assert f[2] == 0
+        @assert f[3] == 0
+        F[i] = f[1]
+    end
+    F = simplify.(
         SymbolicUtils.substitute(F[1], Dict([vars.η => 1])) -
         SymbolicUtils.substitute(F[1], Dict([vars.η => -1])),
     )
