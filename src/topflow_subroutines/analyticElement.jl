@@ -347,10 +347,13 @@ function residualFormation(vars, τ, Nu, ux, dNudx, dudx, dpdx, px, Np, dNpdx, d
     return Ru, Rp
 end
 
+# TODO -- this function is currently broken
+#   the intent is to have G be populated with the 
+#   element-wise results f[i]
 function doubleIntegrate(expression, vars)
     """ Integrates over the unit square in ξ and η """
     F = integrate.(expression, vars.ξ; symbolic = true)
-    G = {}
+    # G = {}
     for i in eachindex(F)
         f = F[i]
         @assert f[2] == 0
