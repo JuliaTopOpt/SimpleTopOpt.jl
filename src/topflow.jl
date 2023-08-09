@@ -1,13 +1,61 @@
 module TopFlow
 
+include("topflow_subroutines/analyticElement.jl")
+
 using LinearAlgebra
 using SparseArrays
 using FillArrays
+# using topflow_MATLAB_functions
+using MATLAB
 
 import ..TopflowContainer, ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA
 export topflow
 
-include("topflow_subroutines/analyticElement.jl")
+export call_RES, JAC, PHI, dPHIdg, dPHIds, dRESdg
+
+
+function JAC(dxv, dyv, muv, rhov, alpha, in6)
+    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
+    out = mxcall(:JAC, dxv, dyv, muv, rhov, alpha, in6)
+
+    return out
+end
+
+function call_RES(dxv, dyv, muv, rhov, alpha, in6)
+    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
+    out = mxcall(:RES, dxv, dyv, muv, rhov, alpha, in6)
+
+    return out
+end
+
+function PHI(dxv, dyv, muv, alpha, in5)
+    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
+    out = mxcall(:PHI, dxv, dyv, muv, rhov, alpha, in5)
+
+    return out
+end
+
+function dPHIdg(dxv, dyv, muv, alpha, dalpha, in6)
+    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
+    out = mxcall(:dPHIdg, dxv, dyv, muv, alpha, dalpha, in6)
+
+    return out
+end
+
+function dPHIds(dxv, dyv, muv, alpha, in5)
+    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
+    out = mxcall(:dPHIds, dxv, dyv, muv, alpha, in5)
+
+    return out
+end
+
+function dRESdg(dxv, dyv, muv, rhov, alpha, dalpha, in7)
+    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
+    out = mxcall(:dRESdg, dxv, dyv, muv, rhov, alpha, dalpha, in7)
+
+    return out
+end
+
 
 """
     `topflow`
@@ -16,7 +64,8 @@ Fluidic topology optimization
 """
 function topflow(problem_container::T, writeout::Bool = false) where {T<:TopflowContainer}
 
-    JAC, RES, PHI, dPHIdg, dPHIds, dRESdg = analyticElement.generation()
+    # TODO -- once analyticElement is replaced with pure Julia
+    # JAC, RES, PHI, dPHIdg, dPHIds, dRESdg = analyticElement.generation()
 
     # TODO: do I need to error check the physical parameters, etc?
     tfdc = problem_container.tfdc
@@ -87,11 +136,10 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
             (xPhys * qa .+ 1) .^ 2 .- (bkman.alphamax - bkmin.alphamin) ./ (xPhys * qa .+ 1)
 
         # Newtown solve
-        newton(nlittot)       # TODO -- what else does this need, if anything?
+        newton(nlittot, dxv, dyv, muv, rhov, alphav)
 
         # Objective evaluation
-
-        obj = sum(PHI(dxv, dyv, muv, alpha', S(edofMat')))
+        obj = sum(mxcall(dxv, dyv, muv, alpha', S(edofMat')))
         change = abs(objOld - obj) / objOld
         objOld = obj
 
@@ -177,7 +225,7 @@ end
 """
 Nonlinear Newton Solver
 """
-function newton(nlittot::Int, printout::Bool = false)
+function newton(nlittot::Int, dxv, dyv, muv, rhov, alphav, printout::Bool = false)
 
     fail = -1
     normR = 1
@@ -189,7 +237,7 @@ function newton(nlittot::Int, printout::Bool = false)
 
         # Build residual and Jacobian
         # TODO -- need RES
-        sR = RES(dxv, dyv, muv, rhov, alpha', S(fea.edofMat'))
+        sR = call_RES(dxv, dyv, muv, rhov, alpha', S[fea.edofMat'])
         R = sparse(iR, jR, sR)
         R(fixedDofs) = 0
 

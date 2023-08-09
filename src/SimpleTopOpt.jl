@@ -19,4 +19,6 @@ export BrinkmanPenalizationParameters, SIMPParameters
 export TopflowDomain, DoublePipeContainer, PipeBendContainer
 
 
+export call_RES, JAC, PHI, dPHIdg, dPHIds, dRESdg
+
 end
