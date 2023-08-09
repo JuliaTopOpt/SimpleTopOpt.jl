@@ -33,7 +33,6 @@ function ftoc(expression, var, lower, upper)
         SymbolicUtils.substitute(expression, Dict([var => upper])) -
         SymbolicUtils.substitute(expression, Dict([var => lower])),
     )
-
 end
 
 
