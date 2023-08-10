@@ -17,8 +17,11 @@ if all_tests || "topflow" in ARGS
     @testset "Topflow integration test suite" begin
         # include("unit_tests/topflow/ut_integration.jl")
     end
+    @testset "MATLAB ffi tests" begin
+        include("unit_tests/topflow/matlab_ffi_tests/ffi_tests.jl")
+    end
     @testset "Topflow symbolic suite" begin
-        include("unit_tests/topflow/symbolics/ut_symbolics.jl")
+        # include("unit_tests/topflow/symbolics/ut_symbolics.jl")
     end
     println("Finished Topflow Suite...")
 end

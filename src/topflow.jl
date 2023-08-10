@@ -13,45 +13,46 @@ export topflow
 
 export call_RES, JAC, PHI, dPHIdg, dPHIds, dRESdg
 
+const _dir = @__DIR__
 
-function JAC(dxv, dyv, muv, rhov, alpha, in6)
-    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
-    out = mxcall(:JAC, dxv, dyv, muv, rhov, alpha, in6)
+function call_JAC(dxv, dyv, muv, rhov, alpha, in6)
+    eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
+    out = mxcall(:JAC, 1, dxv, dyv, muv, rhov, alpha, in6)
 
     return out
 end
 
 function call_RES(dxv, dyv, muv, rhov, alpha, in6)
-    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
-    out = mxcall(:RES, dxv, dyv, muv, rhov, alpha, in6)
+    eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
+    out = mxcall(:RES, 1, dxv, dyv, muv, rhov, alpha, in6)
 
     return out
 end
 
-function PHI(dxv, dyv, muv, alpha, in5)
-    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
-    out = mxcall(:PHI, dxv, dyv, muv, rhov, alpha, in5)
+function call_PHI(dxv, dyv, muv, alpha, in5)
+    eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
+    out = mxcall(:PHI, 1, dxv, dyv, muv, alpha, in5)
 
     return out
 end
 
-function dPHIdg(dxv, dyv, muv, alpha, dalpha, in6)
-    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
-    out = mxcall(:dPHIdg, dxv, dyv, muv, alpha, dalpha, in6)
+function call_dPHIdg(dxv, dyv, muv, alpha, dalpha, in6)
+    eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
+    out = mxcall(:dPHIdg, 1, dxv, dyv, muv, alpha, dalpha, in6)
 
     return out
 end
 
-function dPHIds(dxv, dyv, muv, alpha, in5)
-    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
-    out = mxcall(:dPHIds, dxv, dyv, muv, alpha, in5)
+function call_dPHIds(dxv, dyv, muv, alpha, in5)
+    eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
+    out = mxcall(:dPHIds, 1, dxv, dyv, muv, alpha, in5)
 
     return out
 end
 
-function dRESdg(dxv, dyv, muv, rhov, alpha, dalpha, in7)
-    mat"addpath('" * @__DIR__ * "/topflow_subroutines/matlab_ffi_routines')"
-    out = mxcall(:dRESdg, dxv, dyv, muv, rhov, alpha, dalpha, in7)
+function call_dRESdg(dxv, dyv, muv, rhov, alpha, dalpha, in7)
+    eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
+    out = mxcall(:dRESdg, 1, dxv, dyv, muv, rhov, alpha, dalpha, in7)
 
     return out
 end
