@@ -113,5 +113,3 @@ end
     @test size(r_dresdg) == size(t_dresdg)
     @test norm(r_dresdg - t_dresdg) / (12 * 900) ≈ 0
 end
-
-

@@ -360,10 +360,11 @@ function doubleIntegrate(expression, vars)
         @assert f[3] == 0
         F[i] = f[1]
     end
-    F = simplify.(
-        SymbolicUtils.substitute(F[1], Dict([vars.ξ => 1])) -
-        SymbolicUtils.substitute(F[1], Dict([vars.ξ => -1])),
-    )
+    F =
+        simplify.(
+            SymbolicUtils.substitute(F[1], Dict([vars.ξ => 1])) -
+            SymbolicUtils.substitute(F[1], Dict([vars.ξ => -1])),
+        )
 
     F = integrate.(F, vars.η; symbolic = true)
     for i in eachindex(F)
@@ -372,10 +373,11 @@ function doubleIntegrate(expression, vars)
         @assert f[3] == 0
         F[i] = f[1]
     end
-    F = simplify.(
-        SymbolicUtils.substitute(F[1], Dict([vars.η => 1])) -
-        SymbolicUtils.substitute(F[1], Dict([vars.η => -1])),
-    )
+    F =
+        simplify.(
+            SymbolicUtils.substitute(F[1], Dict([vars.η => 1])) -
+            SymbolicUtils.substitute(F[1], Dict([vars.η => -1])),
+        )
 
     return F
 end

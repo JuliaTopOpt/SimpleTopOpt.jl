@@ -134,6 +134,8 @@ struct TopflowContinuation <: ParameterContainer
     qanum::Int64
     conit::Int64
 
+    bkman::BrinkmanPenalizationParameters
+
     """
     Constructor
     """
@@ -150,8 +152,7 @@ struct TopflowContinuation <: ParameterContainer
         qavec = qinit ./ [1 2 10 20]
         qanum = length(qavec)
 
-        new(ainit, qinit, qavec, qanum, conit)
-
+        new(ainit, qinit, qavec, qanum, conit, bkman)
     end
 end
 
@@ -177,12 +178,12 @@ struct TopflowOptNSParams <: ParameterContainer
     Constructor
     """
     function TopflowOptNSParams(
-        maxiter::Int64,
-        mvlim::Float64,
-        chlim::Float64,
-        chnum::Int64,
-        nltol::Float64,
-        nlmax::Int64,
+        maxiter::Int64 = 200,
+        mvlim::Float64 = 0.2,
+        chlim::Float64 = 1e-3,
+        chnum::Int64 = 5,
+        nltol::Float64 = 1e-6,
+        nlmax::Int64 = 25,
     )
         # TODO: assertions on positivty/ non-negativity, etc.
         @assert maxiter > 0
@@ -347,8 +348,8 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
         fea = TopflowFEA(tfdc)
         bc = DoublePipeBC(tfdc, fea, Uin)
 
-        # TODO: fill this in; or have taken as argument
-        solver_opts = Nothing
+        # TODO: Take this as parameter?
+        solver_opts = TopflowOptNSParams()
 
         bkman = BrinkmanPenalizationParameters(mu)
 
@@ -356,7 +357,20 @@ struct DoublePipeContainer{U<:OptimizerContainer} <: TopflowContainer
 
         Renum = Uin * (bc.inletLength * tfdc.Ly / tfdc.nely) * rho / mu
 
-        new{U}(tfdc, tc, solver_opts, bkman, volfrac, optimizer, fea, bc, Renum)
+        new{U}(
+            tfdc,
+            tc,
+            solver_opts,
+            bkman,
+            volfrac,
+            optimizer,
+            fea,
+            bc,
+            Uin,
+            rho,
+            mu,
+            Renum,
+        )
     end
 end
 
