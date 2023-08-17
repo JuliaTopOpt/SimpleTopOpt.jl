@@ -20,10 +20,15 @@ using SimpleTopOpt.TopFlow
     dpbc = SimpleTopOpt.DoublePipeBC(tfdc, fea, Uin)
     dpc = DoublePipeContainer(tfdc, volfrac, optimizer)
 
-    t_xPhys = SimpleTopOpt.TopFlow.topflow(dpc)
+    sol = SimpleTopOpt.TopFlow.topflow(dpc)
+    t_xPhys = sol.xPhys
 
     @test size(r_xPhys) == size(t_xPhys)
-    @test norm(r_xPhys - t_xPhys) / (30 * 30) ≈ 0
+    
+    residuals = r_xPhys - t_xPhys
+
+    @test norm(residuals) / (30 * 30) ≈ 0
+    @test sum(abs.(residuals)) / (30 * 30) ≈ 0
 end
 
 

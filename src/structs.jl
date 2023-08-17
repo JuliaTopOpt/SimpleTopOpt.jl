@@ -501,3 +501,38 @@ struct PipeBendContainer{U<:OptimizerContainer} <: TopflowContainer
         new{U}(tfdc, tc, volfrac, optimizer, fea, bc, Uin, rho, mu, Renum)
     end
 end
+
+
+
+# TODO -- topflow solution struct, which we can hopefully feed straight into a plotting utility?
+# TODO -- documentation
+struct TopflowSolution{U <: TopflowContainer}
+    problem_container::U
+
+    # TODO -- typehint the below
+    xPhys::Any
+    loop::Int64
+    change_hist::Any
+    obj_hist::Any
+    xPhys_hist::Any
+
+
+    function TopflowSolution(
+        problem_container::U,
+        xPhys,
+        loop,
+        change_hist,
+        obj_hist,
+        xPhys_hist
+    ) where U <: TopflowContainer
+
+        new{U}(
+            problem_container,
+            xPhys,
+            loop,
+            change_hist,
+            obj_hist,
+            xPhys_hist
+        )
+    end
+end

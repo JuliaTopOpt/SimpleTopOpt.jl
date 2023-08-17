@@ -9,7 +9,7 @@ using FillArrays
 using MATLAB
 using Statistics
 
-import ..TopflowContainer, ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA
+import ..TopflowContainer, ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
 export topflow
 
 const _dir = @__DIR__
@@ -25,7 +25,7 @@ into JAC
 function call_JAC(dxv, dyv, muv, rhov, alpha, in6)
     eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
 
-    out = mxcall(:JAC, 1, mxarray(dxv), mxarray(dyv), mxarray(muv), mxarray(rhov), mxarray(alpha), mxarray(in6))
+    out = mxcall(:JAC, 1, dxv, dyv, muv, rhov, alpha, in6)
 
     return out
 end
@@ -38,15 +38,7 @@ into RES
 """
 function call_RES(dxv, dyv, muv, rhov, alpha, in6)
     eval_string("addpath('" * _dir * "/topflow_subroutines/matlab_ffi_routines')")
- 
-    mdxv = mxarray(dxv)
-    mdyv = mxarray(dyv)
-    mmuv = mxarray(muv)
-    mrhov = mxarray(rhov)
-    malpha = mxarray(alpha)
-    min6 = mxarray(in6)
-
-    out = mxcall(:RES, 1, mdxv, mdyv, mmuv, mrhov, malpha, min6)
+    out = mxcall(:RES, 1, dxv, dyv, muv, rhov, alpha, in6)
 
     return out
 end
@@ -176,6 +168,10 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     if writeout
         println("TODO --- fill out problem info string")
     end
+    
+    change_hist = Array{Float64}(undef, 0)
+    xPhys_hist = Array{Matrix{Float64}}(undef, 0)
+    obj_hist = Array{Float64}(undef, 0)
 
     ### Begin optimization loop
     while loop <= solver_opts.maxiter
@@ -203,11 +199,10 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         objOld = obj
 
         # Volume constraint
-        V = mean(xPhys)
+        if writeout
+            print("Current volume constraint: " * string(mean(xPhys)))
+        end
 
-        # Print results
-
-        # TODO: Here
 
         # Evaluate current iterate - continue unless considered converged
 
@@ -221,6 +216,9 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
             break
         end
 
+        loop += 1
+        loopcont += 1
+
         # Adjoint solver
         sR = [call_dPHIds(dxv, dyv, muv, alpha_T, S[fea.edofMat']); zeros(4, fea.neltot)]
 
@@ -229,7 +227,6 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         RHS[bc.fixedDofs] .= 0
         sJ = call_JAC(dxv, dyv, muv, rhov, alpha_T, S[fea.edofMat'])
 
-        # TODO: Check size
         J = sparse(fea.iJ[:], fea.jJ[:], sJ[:])
         J = (ND' * J * ND + EN)
         L = Matrix(J') \ Matrix(RHS)
@@ -247,7 +244,7 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
 
         # Optimality criteria update of design variables and physical densities
         # TODO -- put into its own function for modularity
-        xnew = xPhys
+        xnew = copy(xPhys)
         xlow = xPhys[:] .- solver_opts.mvlim
         xupp = xPhys[:] .+ solver_opts.mvlim
         ocfac = xPhys[:] .* max.(1e-10, (-sens[:] ./ dV[:])) .^ (1 / 3)
@@ -262,25 +259,27 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
                 l2 = lmid
             end
         end
-        xPhys = xnew
+        xPhys = copy(xnew)
+
+        # NOTE -- UPDATE ALL LISTS HERE
+        # append!(xPhys_hist, xPhys)
+        append!(change_hist, change)
+        append!(obj_hist, obj)
 
 
         # Continuation update
-
         if (qastep < continuation.qanum && (loopcont == continuation.conit || chcnt == solver_opts.chnum))
             loopcont = 0
             chcnt = 0
-            qastep = qastep + 1
+            qastep += 1
             qa = continuation.qavec[qastep]
         end
-
     end
 
-
     # TODO -- what to return?
-    #      -- will need at least xPhys
+    sol = TopflowSolution(problem_container, xPhys, loop, change_hist, obj_hist, xPhys_hist)
 
-    return xPhys
+    return sol
 end
 
 
@@ -423,29 +422,4 @@ function OCUpdate(problem_container::TopflowContainer)
 end
 
 
-
-
-end
-
-
-
-
-
-if abspath(PROGRAM_FILE) == @__FILE__
-    Lx = 1.0
-    Ly = 1.0
-    nely = 30
-    volfrac = 1 / 3
-    Uin = 1e0
-    rho = 1e0
-    mu = 1e0
-    conit = 50
-
-    tfdc = TopflowDomain(Lx, Ly, nely)
-    fea = SimpleTopOpt.TopflowFEA(tfdc)
-    optimizer = OCParameters(200, 0.2)
-    dpbc = SimpleTopOpt.DoublePipeBC(tfdc, fea, Uin)
-    dpc = DoublePipeContainer(tfdc, volfrac, optimizer, Uin, rho, mu)
-
-    t_xPhys = SimpleTopOpt.TopFlow.topflow(dpc)
 end
