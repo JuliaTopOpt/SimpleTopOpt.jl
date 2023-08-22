@@ -9,7 +9,8 @@ using FillArrays
 using MATLAB
 using Statistics
 
-import ..TopflowContainer, ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
+import ..TopflowContainer,
+    ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
 export topflow
 
 const _dir = @__DIR__
@@ -137,7 +138,9 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     ### Initialization
     # Solution vector
     S = zeros(fea.doftot, 1)
-    dS = copy(S)
+    # TODO -- this is just used in the newton solver, so we can just
+    #         get rid of this?
+    # dS = copy(S)
     L = copy(S)
     S[bc.fixedDofs] = bc.DIR[bc.fixedDofs]
 
@@ -168,7 +171,7 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     if writeout
         println("TODO --- fill out problem info string")
     end
-    
+
     change_hist = Array{Float64}(undef, 0)
     xPhys_hist = Array{Matrix{Float64}}(undef, 0)
     obj_hist = Array{Float64}(undef, 0)
@@ -182,16 +185,31 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         # Material interpolator
         alpha =
             bkman.alphamin .+
-            (bkman.alphamax - bkman.alphamin) * (1 .- xPhys[:]) ./ (1 .+ qa * xPhys[:])
+            (bkman.alphamax - bkman.alphamin) * (1 .- xPhys) ./ (1 .+ qa * xPhys)
         dalpha =
-            (qa * (bkman.alphamax - bkman.alphamin) * (xPhys[:] .- 1)) ./
-            (xPhys[:] * qa .+ 1) .^ 2 .- (bkman.alphamax - bkman.alphamin) ./ (xPhys[:] * qa .+ 1)
+            (qa * (bkman.alphamax - bkman.alphamin) * (xPhys .- 1)) ./
+            (xPhys * qa .+ 1) .^ 2 .-
+            (bkman.alphamax - bkman.alphamin) ./ (xPhys * qa .+ 1)
 
         alpha_T = collect(alpha')
         dalpha_T = collect(dalpha')
 
         # Newton solve
-        newton(xPhys, nlittot, dxv, dyv, muv, rhov, alpha, S, fea, bc, solver_opts, ND, EN)
+        xPhys = newton(
+            xPhys,
+            nlittot,
+            dxv,
+            dyv,
+            muv,
+            rhov,
+            alpha_T,
+            S,
+            fea,
+            bc,
+            solver_opts,
+            ND,
+            EN,
+        )
 
         # Objective evaluation
         obj = sum(call_PHI(dxv, dyv, muv, alpha_T, S[fea.edofMat']))
@@ -200,9 +218,9 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
 
         # Volume constraint
         if writeout
-            print("Current volume constraint: " * string(mean(xPhys)))
+            println("Current volume constraint: $(mean(xPhys))")
+            println("Change: $(change), Contin. step: $(qastep), qa: $(qa)")
         end
-
 
         # Evaluate current iterate - continue unless considered converged
 
@@ -212,7 +230,10 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
             chcnt = 0
         end
 
-        if (qastep == continuation.qanum && ((chcnt == solver_opts.chnum) || (loopcont == continuation.conit)))
+        if (
+            qastep == continuation.qanum &&
+            ((chcnt == solver_opts.chnum) || (loopcont == continuation.conit))
+        )
             break
         end
 
@@ -220,55 +241,30 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         loopcont += 1
 
         # Adjoint solver
-        sR = [call_dPHIds(dxv, dyv, muv, alpha_T, S[fea.edofMat']); zeros(4, fea.neltot)]
+        L = compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, EN)
 
-        RHS = sparse(fea.iR[:], fea.jR[:], sR[:])
-
-        RHS[bc.fixedDofs] .= 0
-        sJ = call_JAC(dxv, dyv, muv, rhov, alpha_T, S[fea.edofMat'])
-
-        J = sparse(fea.iJ[:], fea.jJ[:], sJ[:])
-        J = (ND' * J * ND + EN)
-        L = Matrix(J') \ Matrix(RHS)
 
         # Compute sensitivities
-        sR = call_dRESdg(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S[fea.edofMat'])
-
-        # TODO: Check size
-        dRdg = sparse(fea.iR[:], fea.jE[:], sR[:])
-        dphidg = call_dPHIdg(dxv, dyv, muv, alpha_T, dalpha_T, S[fea.edofMat'])
-        sens = reshape(dphidg - L' * dRdg, tfdc.nely, tfdc.nelx)
-
-        # Volume constraint
-        dV = ones(tfdc.nely, tfdc.nelx) ./ fea.neltot
+        sens, dV =
+            compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, tfdc, L)
 
         # Optimality criteria update of design variables and physical densities
         # TODO -- put into its own function for modularity
-        xnew = copy(xPhys)
-        xlow = xPhys[:] .- solver_opts.mvlim
-        xupp = xPhys[:] .+ solver_opts.mvlim
-        ocfac = xPhys[:] .* max.(1e-10, (-sens[:] ./ dV[:])) .^ (1 / 3)
-        l1 = 0
-        l2 = (1 / (fea.neltot * vf) * sum(ocfac))^3
-        while (l2 - l1) / (l1 + l2) > 1e-3
-            lmid = 0.5 * (l2 + l1)
-            xnew[:] = max.(0, max.(xlow, min.(1, min.(xupp, ocfac / (lmid^(1 / 3))))))
-            if mean(xnew[:]) > vf
-                l1 = lmid
-            else
-                l2 = lmid
-            end
-        end
-        xPhys = copy(xnew)
+        # TODO -- this will make no sense when we try to move over to a different optimizer
+        
+        # TODO -- refactor into doing this in-place
+        xPhys = OCUpdate(xPhys, sens, dV, problem_container)
 
         # NOTE -- UPDATE ALL LISTS HERE
         # append!(xPhys_hist, xPhys)
         append!(change_hist, change)
         append!(obj_hist, obj)
 
-
         # Continuation update
-        if (qastep < continuation.qanum && (loopcont == continuation.conit || chcnt == solver_opts.chnum))
+        if (
+            qastep < continuation.qanum &&
+            (loopcont == continuation.conit || chcnt == solver_opts.chnum)
+        )
             loopcont = 0
             chcnt = 0
             qastep += 1
@@ -287,27 +283,25 @@ end
 Nonlinear Newton Solver
 """
 function newton(
-    xPhys,
     nlittot::Int,
     dxv,
     dyv,
     muv,
     rhov,
-    alpha,
+    alpha_T,
     S,
     fea::TopflowFEA,
     bc,
     solver_opts,
     ND,
     EN,
-    printout::Bool = false,
+    writeout::Bool = false,
 )
+    S_temp = copy(S)   
 
     fail = -1
     normR = 1
     nlit = 0
-
-    alpha_T = collect(alpha')
 
     r0 = 0.0
     while fail != 1
@@ -315,7 +309,7 @@ function newton(
         nlittot += 1
 
         # Build residual and Jacobian
-        sR = call_RES(dxv, dyv, muv, rhov, alpha_T, S[fea.edofMat'])
+        sR = call_RES(dxv, dyv, muv, rhov, alpha_T, S_temp[fea.edofMat'])
         R = sparse(fea.iR[:], fea.jR[:], sR[:])
         R[bc.fixedDofs] .= 0
 
@@ -336,31 +330,31 @@ function newton(
         J = (ND' * J * ND + EN)
 
         # Calculate Newton step
-        # TODO -- J and R are both sparse matrices, but doing the below cast is expensive
-        #         and we completely lose out on having these sparse matrices to begin with
+        # TODO -- J and R are both sparse matrices; is doing the below cast expensive?
+        #         + we completely lose out on having these sparse matrices to begin with
         dS = -Matrix(J) \ Matrix(R)
 
         # L2-norm line search
-        Sp = S + 0.5 * dS
+        Sp = S_temp + 0.5 * dS
         sR = call_RES(dxv, dyv, muv, rhov, alpha_T, Sp[fea.edofMat'])
         R = sparse(fea.iR[:], fea.jR[:], sR[:])
         R[bc.fixedDofs] .= 0
         r2 = norm(R)
 
-        Sp = S + 1.0*dS;
-        sR = call_RES(dxv, dyv, muv, rhov, alpha_T, Sp[fea.edofMat']);
+        Sp = S_temp + 1.0 * dS
+        sR = call_RES(dxv, dyv, muv, rhov, alpha_T, Sp[fea.edofMat'])
         R = sparse(fea.iR[:], fea.jR[:], sR[:])
         R[bc.fixedDofs] .= 0
         r3 = norm(R)
 
         # Solution update with "optimal" damping
         lambda = max(0.01, min(1.0, (3 * r1 + r3 - 4 * r2) / (4 * r1 + 4 * r3 - 8 * r2)))
-        S = S + lambda * dS
+        S_temp += lambda * dS
 
         # if fail, retry from zero solution
         if (nlit == solver_opts.nlmax && fail < 0)
             nlit = 0
-            S[freeDofs] = 0.0
+            S_temp[freeDofs] = 0.0
             normR = 1
             fail += 1
         end
@@ -368,12 +362,9 @@ function newton(
         if (nlit == solver_opts.nlmax && fail < 1)
             fail += 1
         end
-
-        # TODO -- what to return?
-
     end
 
-    if printout
+    if writeout
         println("<Something informative here>")
     end
 
@@ -383,43 +374,83 @@ function newton(
         )
     end
 
-    return xPhys
-
+    return S_temp
 end
 
 
 """
 Optimality Criterion optimization update step
 """
-function OCUpdate(problem_container::TopflowContainer)
+function OCUpdate(xPhys, sens, dV, problem_container)
     ## TODO -- how to type annotate where we should accept either problem container but
     ##         only ones using OCParameters
 
-    fea = problem_container.TopflowFEA
-    bc = problem_container.bc
-
-    oc = problem_container.optimizer
+    fea = problem_container.fea
     vf = problem_container.volfrac
+    solver_opts = problem_container.solver_opts
+
+    xnew = copy(xPhys)
+    xlow = xPhys .- solver_opts.mvlim
+    xupp = xPhys .+ solver_opts.mvlim
+    
+    @assert size(xPhys) == (30,30)
+    @assert size(sens) == (30,30)
+    @assert size(dV) == (30,30)
 
 
-    xlow = xPhys[:] - mvlim
-    xupp = xPhys[:] + mvlim
-    # TODO -- where are sens and dV coming from?
-    ocfac = xPhys[:] .* max(1e-10, (-sens[:] ./ dV[:])) .^ (1 / 3)
+    ocfac = xPhys .* max.(1e-10, (-sens[:] ./ dV[:])) .^ (1 / 3)
     l1 = 0
     l2 = (1 / (fea.neltot * vf) * sum(ocfac))^3
     while (l2 - l1) / (l1 + l2) > 1e-3
         lmid = 0.5 * (l2 + l1)
-        xnew[:] = max(0, max(xlow, min(1, min(xupp, ocfac / (lmid^(1 / 3))))))
-        if mean(xnew[:]) > vf
+        xnew = max.(0, max.(xlow, min.(1, min.(xupp, ocfac / (lmid^(1 / 3))))))
+        if mean(xnew) > vf
             l1 = lmid
         else
             l2 = lmid
         end
     end
+    xPhys = copy(xnew)
 
     return xPhys
+
 end
+
+function compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, EN)
+    sR = [call_dPHIds(dxv, dyv, muv, alpha_T, S[fea.edofMat']); zeros(4, fea.neltot)]
+
+    RHS = sparse(fea.iR[:], fea.jR[:], sR[:])
+
+    RHS[bc.fixedDofs] .= 0
+    sJ = call_JAC(dxv, dyv, muv, rhov, alpha_T, S[fea.edofMat'])
+
+    J = sparse(fea.iJ[:], fea.jJ[:], sJ[:])
+    J = (ND' * J * ND + EN)
+    L = Matrix(J') \ Matrix(RHS)
+
+    return L
+end
+
+function compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, tfdc, L)
+    sR = call_dRESdg(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S[fea.edofMat'])
+
+    # TODO: Check size
+    dRdg = sparse(fea.iR[:], fea.jE[:], sR[:])
+    dphidg = call_dPHIdg(dxv, dyv, muv, alpha_T, dalpha_T, S[fea.edofMat'])
+    sens = reshape(dphidg - L' * dRdg, tfdc.nely, tfdc.nelx)
+
+    # Volume constraint
+    dV = ones(tfdc.nely, tfdc.nelx) ./ fea.neltot
+
+    return sens, dV
+end
+
+
+function init(problem_container)
+
+
+end
+
 
 
 end

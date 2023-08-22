@@ -106,8 +106,9 @@ using MAT
 
     dpc = DoublePipeContainer(tfdc, volfrac, optimizer, Uin, rho, mu)
     @testset "Douple Pipe Container construction" begin
-        @test 1 == 1
+        @test dpc.Renum ≈ 0.166666666666666
 
+        # TODO -- is there anything else to test with this?
     end
 
     ### Problem 2
@@ -126,7 +127,7 @@ using MAT
         @test pbbc.inletLength == 6.0
     end
 
-    pbc = PipeBendContainer(tfdc, volfrac, optimizer, Uin, rho, mu)
+    pbc = PipeBendContainer(tfdc, cont, volfrac, optimizer, Uin, rho, mu)
     @testset "Pipe Bend Container construction" begin
         @test pbc.Renum ≈ 0.2
 

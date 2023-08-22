@@ -426,22 +426,22 @@ struct PipeBendBC <: TopflowBoundaryConditions
         fixedDofsOutX = 2 * nodesOutlet .- 1
         fixedDofsOutP = 2 * fea.nodtot .+ nodesOutlet
 
-        println("Sizes for problem 2 -- pipe bend")
-        println(size(fixedDofsTBx))
-        println(size(fixedDofsTBy))
-        println(size(fixedDofsLRx))
-        println(size(fixedDofsLRy))
-        println(size(fixedDofsInX))
-        println(size(fixedDofsInY))
-        println(size(fixedDofsOutX))
-        println(size(fixedDofsOutP))
+        # println("Sizes for problem 2 -- pipe bend")
+        # println(size(fixedDofsTBx))
+        # println(size(fixedDofsTBy))
+        # println(size(fixedDofsLRx))
+        # println(size(fixedDofsLRy))
+        # println(size(fixedDofsInX))
+        # println(size(fixedDofsInY))
+        # println(size(fixedDofsOutX))
+        # println(size(fixedDofsOutP))
 
-        for i in eachindex(fixedDofsTBy)
-            print(string(i) * ": ")
-            println(fixedDofsTBy[i])
-        end
+        # for i in eachindex(fixedDofsTBy)
+        #     print(string(i) * ": ")
+        #     println(fixedDofsTBy[i])
+        # end
 
-        println(sum(fixedDofsTBy))
+        # println(sum(fixedDofsTBy))
 
         fixedDofsU = [
             fixedDofsTBx fixedDofsTBy fixedDofsLRx fixedDofsLRy fixedDofsInX fixedDofsInY fixedDofsOutX
@@ -506,7 +506,7 @@ end
 
 # TODO -- topflow solution struct, which we can hopefully feed straight into a plotting utility?
 # TODO -- documentation
-struct TopflowSolution{U <: TopflowContainer}
+struct TopflowSolution{U<:TopflowContainer}
     problem_container::U
 
     # TODO -- typehint the below
@@ -523,16 +523,9 @@ struct TopflowSolution{U <: TopflowContainer}
         loop,
         change_hist,
         obj_hist,
-        xPhys_hist
-    ) where U <: TopflowContainer
+        xPhys_hist,
+    ) where {U<:TopflowContainer}
 
-        new{U}(
-            problem_container,
-            xPhys,
-            loop,
-            change_hist,
-            obj_hist,
-            xPhys_hist
-        )
+        new{U}(problem_container, xPhys, loop, change_hist, obj_hist, xPhys_hist)
     end
 end

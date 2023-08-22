@@ -12,12 +12,22 @@ all_tests = (isempty(ARGS) || "all" in ARGS)
 if all_tests || "topflow" in ARGS
     println("Beginning topflow suite...")
     
-    @testset "Topflow end-to-end tests" begin
-        include("unit_tests/topflow/int_topflow.jl")
-    end
     @testset "Topflow Suite" begin
         # include("unit_tests/topflow/ut_topflow.jl")
     end
+
+    @testset "Topflow intermediates Problem type 1" begin
+        include("unit_tests/topflow/ut_intermediates_type1.jl")
+    end
+
+    @testset "Topflow intermediates Problem type 2" begin
+        # include("unit_tests/topflow/ut_intermediates_type2.jl")
+    end
+
+    @testset "Topflow end-to-end tests" begin
+        # include("unit_tests/topflow/int_topflow.jl")
+    end
+
     @testset "Topflow symbolic integration tests" begin
         # include("unit_tests/topflow/ut_integration.jl")
     end
