@@ -1,0 +1,94 @@
+abstract type Parameters end
+
+##################################################################################################
+# Material interpolation techniques
+##################################################################################################
+
+"""@docs
+    ModifiedSIMPParameters
+
+Modified SIMP (solid isotropic material power) law parameter container. The fields
+`E0` and `Emin` are required for Top88 problems, though default values are given;
+these are not used for TopFlow.
+"""
+@kwdef struct ModifiedSIMPParameters <: Parameters
+    rmin::Float64
+    penal::Float64
+    
+    E0::Float64 = 1.0
+    Emin::Float64 = 1e-9
+end
+
+##################################################################################################
+# Topflow specific
+##################################################################################################
+
+"""@docs
+    BrinkmanPenalizationParameters
+
+Defines the Brinkman penalization technique for Topflow problems
+"""
+@kwdef struct BrinkmanPenalizationParameters <: Parameters
+    alphamax::Float64 = 25000
+    alphamin::Float64 = 0.00025
+
+    function BrinkmanPenalizationParameters(mu::Float64)
+        new(2.5 * mu / (0.01^2), 2.5 * mu / (100^2))
+    end
+end
+
+"""@docs
+    TopflowContinuation
+
+Defines the TopFlow continuation strategy and maintains the relevant parameters.
+"""
+struct TopflowContinuation <: Parameters
+    ainit::Float64
+    qinit::Float64
+    qavec::Matrix{Float64}
+    qanum::Int64
+    conit::Int64
+
+    bkman::BrinkmanPenalizationParameters
+
+    function TopflowContinuation(
+        volfrac::Float64 = (1/3),
+        bkman::BrinkmanPenalizationParameters,
+        conit::Int64 = 50,
+    )
+        ainit = bkman.alphamax / 100
+
+        qinit =
+            (-volfrac * (bkman.alphamax - bkman.alphamin) - ainit + bkman.alphamax) /
+            (volfrac * (ainit - bkman.alphamin))
+        qavec = qinit ./ [1 2 10 20]
+        qanum = length(qavec)
+
+        new(ainit, qinit, qavec, qanum, conit, bkman)
+    end
+end
+
+"""
+Topflow optimization and Newton solver parameters
+"""
+@kwdef struct TopflowNumericals <: Parameters
+    maxiter::Int64 = 200
+    mvlim::Float64 = 0.2
+    chlim::Float64 = 1e-3
+    chnum::Int64 = 5
+
+    # Newton Solver Parameters
+    nltol::Float64 = 1e-6
+    nlmax::Int64 = 25
+end
+
+"""
+
+"""
+@kwdef mutable struct TopflowPhysics <: Parameters
+    Uin::Float64 = 1e0
+    rho::Float64 = 1e0
+    mu::Float64 = 1e0
+
+    Renum::Float64 = undef
+end

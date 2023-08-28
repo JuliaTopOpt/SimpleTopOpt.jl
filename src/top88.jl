@@ -4,56 +4,32 @@ using LinearAlgebra
 using SparseArrays
 using Statistics
 
-export top88
 
-# Problem parameters
-# SIMP penalization power
-const penal = 3.0
-# Sensitivity/ density filter radius divided by element size
-const rmin = 2.0
-
-# Physical parameters
-# Young's modulus (for the solid material)
-const E0 = 1
-# Minimum value for Young's modulus for the modified SIMP law
-const Emin = 1e-9
-# Poisson's ratio
-const nu = 0.3
+export optimize
 
 """
-    top88(nelx, nely, volfrac, penal, rmin, ft)
+    top88
 
 A direct, naive Julia port of Andreassen et al. "Efficient topology optimization in MATLAB
 using 88 lines of code." By default, this will reproduce the optimized MBB beam from Sigmund
 (2001).
 
-# Arguments
-- `nelx::S`: Number of elements in the horizontal direction
-- `nely::S`: Number of elements in the vertical direction
-- `volfrac::T`: Prescribed volume fraction
-- `ft::Bool`: Choose between sensitivity (if true) or density filter (if false). Defaults
-    to sensitivity filter.
-- `write::Bool`: If true, will write out iteration number, changes, and density for each
-    iteration. Defaults for false.
-- `loop_max::Int`: Explicitly set the maximum number of iterations. Defaults to 1000.
-
-# Returns
-- `Matrix{T}`: Final material distribution, represented as a matrix
 """
-function top88(
-    nelx::S = 60,
-    nely::S = 20,
-    volfrac::T = 0.5,
-    ft::Bool = true,
-    write::Bool = false,
+function optimize(
+    problem_container::Top88Problem,
+    writeout::Bool = false,
     loop_max::Int = 1000,
-) where {S<:Integer,T<:AbstractFloat}
-    # Prepare finite element analysis
-    A11 = [12 3 -6 -3; 3 12 3 0; -6 3 12 -3; -3 0 -3 12]
-    A12 = [-6 -3 0 3; -3 -6 -3 -6; 0 -3 -6 3; 3 -6 3 -6]
-    B11 = [-4 3 -2 9; 3 -4 -9 4; -2 -9 -4 -3; 9 4 -3 -4]
-    B12 = [2 -3 4 -9; -3 2 9 -2; 4 9 2 3; -9 -2 3 2]
-    KE = 1 / (1 - nu^2) / 24 * ([A11 A12; A12' A11] + nu * [B11 B12; B12' B11])
+)::Top88Solution
+
+    nelx = problem_container.t8dc.nelx
+    nely = problem_container.t8dc.nely
+
+    rmin = problem_container.SIMP.rmin
+    penal = problem_container.SIMP.penal
+    E0 = problem_container.SIMP.E0
+    Emin = problem_container.SIMP.Emin
+
+    KE = Top88FEA(nu).KE
 
     nodenrs = reshape(1:(1+nelx)*(1+nely), 1 + nely, 1 + nelx)
     edofVec = reshape(2 * nodenrs[1:end-1, 1:end-1] .+ 1, nelx * nely, 1)
@@ -69,8 +45,6 @@ function top88(
     iK = reshape(kron(edofMat, ones(8, 1))', 64 * nelx * nely, 1)
     jK = reshape(kron(edofMat, ones(1, 8))', 64 * nelx * nely, 1)
 
-    # Loads and supports
-    # OLD: F = sparse([2], [1], [-1], 2*(nely+1)*(nelx+1), 1)
     F = spzeros(2 * (nely + 1) * (nelx + 1))
     F[2, 1] = -1
     U = spzeros(2 * (nely + 1) * (nelx + 1))
@@ -100,7 +74,6 @@ function top88(
         KK = cholesky(K[freedofs, freedofs])
         U[freedofs] = KK \ F[freedofs]
 
-        # OLD: edM = [convert(Int64,i) for i in edofMat]
         mat = (U[edofMat] * KE) .* U[edofMat]
 
         # Objective function and sensitivity analysis
@@ -119,26 +92,37 @@ function top88(
         end
 
         # Optimality criteria update of design variables and physical densities
-        # TODO -- probable issue with xPhys not pass by reference?
         xnew = OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
-
         change = maximum(abs.(x - xnew))
         x = xnew
 
-        write && println(
-            "Loop = ",
-            loop,
-            ", Change = ",
-            change,
-            ", c = ",
-            c,
-            ", structural density = ",
-            mean(x),
-        )
+        if writeout 
+            println(
+                "Loop = ",
+                loop,
+                ", Change = ",
+                change,
+                ", c = ",
+                c,
+                ", structural density = ",
+                mean(x),
+            )
+        end
         loop >= loop_max && break
     end
 
     return x
+end
+
+
+function Top88FEA(nu::Float64)
+    A11 = [12 3 -6 -3; 3 12 3 0; -6 3 12 -3; -3 0 -3 12]
+    A12 = [-6 -3 0 3; -3 -6 -3 -6; 0 -3 -6 3; 3 -6 3 -6]
+    B11 = [-4 3 -2 9; 3 -4 -9 4; -2 -9 -4 -3; 9 4 -3 -4]
+    B12 = [2 -3 4 -9; -3 2 9 -2; 4 9 2 3; -9 -2 3 2]
+    KE = 1 / (1 - nu^2) / 24 * ([A11 A12; A12' A11] + nu * [B11 B12; B12' B11])
+
+    return KE
 end
 
 

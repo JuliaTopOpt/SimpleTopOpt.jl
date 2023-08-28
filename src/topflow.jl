@@ -114,7 +114,7 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     # JAC, RES, PHI, dPHIdg, dPHIds, dRESdg = analyticElement.generation()
 
     # TODO: do I need to error check the physical parameters, etc?
-    tfdc = problem_container.tfdc
+    domain = problem_container.domain
     fea = problem_container.fea
     bc = problem_container.bc
     continuation = problem_container.tc
@@ -138,14 +138,11 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     ### Initialization
     # Solution vector
     S = zeros(fea.doftot, 1)
-    # TODO -- this is just used in the newton solver, so we can just
-    #         get rid of this?
-    # dS = copy(S)
     L = copy(S)
     S[bc.fixedDofs] = bc.DIR[bc.fixedDofs]
 
     # Design Field
-    xPhys = vf * ones(tfdc.nely, tfdc.nelx)
+    xPhys = vf * ones(domain.nely, domain.nelx)
 
     # Counters
     loop = 0
@@ -162,8 +159,8 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     qa = continuation.qavec[1]
 
     # Vectorized constants 
-    dxv = tfdc.dx * ones(1, fea.neltot)
-    dyv = tfdc.dy * ones(1, fea.neltot)
+    dxv = domain.dx * ones(1, fea.neltot)
+    dyv = domain.dy * ones(1, fea.neltot)
     muv = problem_container.mu * ones(1, fea.neltot)
     rhov = problem_container.rho * ones(1, fea.neltot)
 
@@ -185,18 +182,17 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         # Material interpolator
         alpha =
             bkman.alphamin .+
-            (bkman.alphamax - bkman.alphamin) * (1 .- xPhys) ./ (1 .+ qa * xPhys)
+            (bkman.alphamax - bkman.alphamin) * (1 .- xPhys[:]) ./ (1 .+ qa * xPhys[:])
         dalpha =
-            (qa * (bkman.alphamax - bkman.alphamin) * (xPhys .- 1)) ./
-            (xPhys * qa .+ 1) .^ 2 .-
-            (bkman.alphamax - bkman.alphamin) ./ (xPhys * qa .+ 1)
+            (qa * (bkman.alphamax - bkman.alphamin) * (xPhys[:] .- 1)) ./
+            (xPhys[:] * qa .+ 1) .^ 2 .-
+            (bkman.alphamax - bkman.alphamin) ./ (xPhys[:] * qa .+ 1)
 
         alpha_T = collect(alpha')
         dalpha_T = collect(dalpha')
 
         # Newton solve
-        xPhys = newton(
-            xPhys,
+        S = newton(
             nlittot,
             dxv,
             dyv,
@@ -243,16 +239,13 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         # Adjoint solver
         L = compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, EN)
 
-
         # Compute sensitivities
         sens, dV =
-            compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, tfdc, L)
+            compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, domain, L)
 
         # Optimality criteria update of design variables and physical densities
-        # TODO -- put into its own function for modularity
-        # TODO -- this will make no sense when we try to move over to a different optimizer
-        
-        # TODO -- refactor into doing this in-place
+
+        # TODO -- refactor into doing this in-place?
         xPhys = OCUpdate(xPhys, sens, dV, problem_container)
 
         # NOTE -- UPDATE ALL LISTS HERE
@@ -397,8 +390,9 @@ function OCUpdate(xPhys, sens, dV, problem_container)
     @assert size(sens) == (30,30)
     @assert size(dV) == (30,30)
 
+    LHS = max.(1e-10, (-sens ./ dV)) .^ (1 / 3)
 
-    ocfac = xPhys .* max.(1e-10, (-sens[:] ./ dV[:])) .^ (1 / 3)
+    ocfac = xPhys .* LHS
     l1 = 0
     l2 = (1 / (fea.neltot * vf) * sum(ocfac))^3
     while (l2 - l1) / (l1 + l2) > 1e-3
@@ -431,16 +425,16 @@ function compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, 
     return L
 end
 
-function compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, tfdc, L)
+function compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, domain, L)
     sR = call_dRESdg(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S[fea.edofMat'])
 
     # TODO: Check size
     dRdg = sparse(fea.iR[:], fea.jE[:], sR[:])
     dphidg = call_dPHIdg(dxv, dyv, muv, alpha_T, dalpha_T, S[fea.edofMat'])
-    sens = reshape(dphidg - L' * dRdg, tfdc.nely, tfdc.nelx)
+    sens = reshape(dphidg - L' * dRdg, domain.nely, domain.nelx)
 
     # Volume constraint
-    dV = ones(tfdc.nely, tfdc.nelx) ./ fea.neltot
+    dV = ones(domain.nely, domain.nelx) ./ fea.neltot
 
     return sens, dV
 end

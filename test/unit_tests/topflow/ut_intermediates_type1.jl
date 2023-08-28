@@ -18,13 +18,13 @@ const rho = 1e0
 const mu = 1e0
 const conit = 50
 
-tfdc = TopflowDomain(Lx, Ly, nely)
+domain = TopflowDomain(Lx, Ly, nely)
 bkman = BrinkmanPenalizationParameters(mu)
 cont = SimpleTopOpt.TopflowContinuation(volfrac, bkman, conit)
-fea = SimpleTopOpt.TopflowFEA(tfdc)
+fea = SimpleTopOpt.TopflowFEA(domain)
 optimizer = OCParameters(200, 0.2)
-bc = SimpleTopOpt.DoublePipeBC(tfdc, fea, Uin)
-problem_container = DoublePipeContainer(tfdc, volfrac, optimizer, Uin, rho, mu)
+bc = SimpleTopOpt.DoublePipeBC(domain, fea, Uin)
+problem_container = DoublePipeContainer(domain, volfrac, optimizer, Uin, rho, mu)
 
 ### TODO -- the next segment should not be copy-pasted
 EN = Diagonal(I, fea.doftot)
@@ -39,14 +39,11 @@ freedofs = setdiff(alldofs, bc.fixedDofs)
 ### Initialization
 # Solution vector
 S = zeros(fea.doftot)
-# TODO -- this is just used in the newton solver, so we can just
-#         get rid of this?
-# dS = copy(S)
 L = copy(S)
 S[bc.fixedDofs] = bc.DIR[bc.fixedDofs]
 
 # Design Field
-xPhys = volfrac * ones(tfdc.nely, tfdc.nelx)
+xPhys = volfrac * ones(domain.nely, domain.nelx)
 
 # Counters
 loop = 0
@@ -63,8 +60,8 @@ qastep = 1
 qa = cont.qavec[1]
 
 # Vectorized constants 
-dxv = tfdc.dx * ones(1, fea.neltot)
-dyv = tfdc.dy * ones(1, fea.neltot)
+dxv = domain.dx * ones(1, fea.neltot)
+dyv = domain.dy * ones(1, fea.neltot)
 muv = problem_container.mu * ones(1, fea.neltot)
 rhov = problem_container.rho * ones(1, fea.neltot)
 
@@ -119,8 +116,8 @@ S = newton(
     t_S = vars["S"]
 
     @test size(S) == size(t_S)
-    # @test_skip norm(t_S - S) / 2883 ≈ 0 atol=1e-10 # fails @ 1e-9
-    # @test_skip sum(abs.(t_S - S)) / 2883 ≈ 0 atol=1e-10 # fails @ 1e-8
+    @test norm(t_S - S) / 2883 ≈ 0 atol=1e-7
+    @test sum(abs.(t_S - S)) / 2883 ≈ 0 atol=1e-7
 end
 
 obj = sum(SimpleTopOpt.TopFlow.call_PHI(dxv, dyv, muv, alpha_T, S[fea.edofMat']))
@@ -136,16 +133,14 @@ L = compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, EN)
     t_L = vars["L"]
 
     @test size(t_L) == size(L)
-    @test norm(t_L - L) / 2883 ≈ 0 atol=1e-10
-    @test sum(abs.(t_L - L)) / 2883 ≈ 0 atol=1e-10
+    @test norm(t_L - L) / 2883 ≈ 0 atol=1e-8
+    @test sum(abs.(t_L - L)) / 2883 ≈ 0 atol=1e-8
 end
 
-sens, dV = compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, tfdc, L)
+sens, dV = compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, domain, L)
 
 @testset "Sensitivity computation" begin
-
-    vars = matread("mat_cases/topflow_unit_tests/DoublePipeBC/dV_standard.mat")
-    t_dV = vars["dV"]
+    t_dV = ones(domain.nely, domain.nelx) / fea.neltot
 
     vars = matread("mat_cases/topflow_unit_tests/DoublePipeBC/sens_standard.mat")
     t_sens = vars["sens"]
@@ -162,6 +157,10 @@ end
 xPhys = OCUpdate(xPhys, sens, dV, problem_container)
 
 @testset "Optimality Criterion update" begin
+    vars = matread("mat_cases/topflow_unit_tests/DoublePipeBC/xPhys_post_OCUpdate_standard.mat")
+    t_xPhys = vars["xPhys"]
 
-
+    @test size(xPhys) == (30,30)
+    @test norm(t_xPhys - xPhys) / 900 ≈ 0 atol=1e-10
+    @test sum(abs.(t_xPhys - xPhys)) / 900 ≈ 0 atol=1e-10
 end

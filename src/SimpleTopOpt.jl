@@ -1,24 +1,21 @@
 module SimpleTopOpt
 
-include("structs.jl")
+using Reexport
+
+include("structs/parameters.jl")
+include("structs/domains.jl")
+include("structs/optimizers.jl")
+include("structs/boundaryconditions.jl")
+include("structs/femdefinitions.jl")
+include("structs/problems.jl")
+
 include("top88.jl")
 include("toph.jl")
 include("topflow.jl")
 
-using .Top88
-using .TopH
-using .TopFlow
-
-export top88
-export topH
-
-export OCParameters
-
-export BrinkmanPenalizationParameters, SIMPParameters
-
-export TopflowDomain, DoublePipeContainer, PipeBendContainer
-
-
-export call_RES, JAC, PHI, dPHIdg, dPHIds, dRESdg
+@reexport using .Structs
+@reexport using .Top88
+@reexport using .TopH
+@reexport using .TopFlow
 
 end
