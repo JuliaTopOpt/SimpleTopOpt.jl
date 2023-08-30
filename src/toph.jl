@@ -14,30 +14,16 @@ export FE
 
 A direct, naive Julia port of the `toph` code listing from "Topology Optimization"
 by Martin Bendsøe and Ole Sigmund.
-
-# Arguments
-- `nelx::S`: Number of elements in the horizontal direction
-- `nely::S`: Number of elements in the vertical direction
-- `volfrac::T`: Prescribed volume fraction
-- `penal::T`: The penalization power
-- `rmin::T`: Filter radius divided by the element size
-- `write::Bool`: If true, will write out iteration number, changes, and density
-    for each iteration. Defaults to false.
-- `loop_max::Int`: Explicitly set the maximum number of iterations. Defaults to 1000.
-
-# Returns
-- `Matrix{T}`: Final material distribution, represented as a matrix.
 """
-function toph(
-    nelx::S,
-    nely::S,
-    volfrac::T,
-    penal::T,
-    rmin::T,
+function optimize(
+    problem::TophProblem{U},
     write::Bool = false,
     loop_max::Int = 100,
-) where {S<:Integer,T<:AbstractFloat}
+)::TophSolution where {U<:Optimizer}
     # Initialization
+
+    penal = problem.SIMP.penal
+
     x = volfrac * ones(nely, nelx)
     loop = 0
     change = 1.0
@@ -85,7 +71,9 @@ function toph(
         loop >= loop_max && break
     end
 
-    return x
+    return Top88Solution(
+
+    )
 end
 
 """
@@ -128,7 +116,7 @@ function OC(
             end
         end
 
-        if (sum(sum(xnew)) - volfrac * nelx * nely) > 0
+        if (sum(xnew) - (volfrac * nelx * nely)) > 0
             l1 = lmid
         else
             l2 = lmid

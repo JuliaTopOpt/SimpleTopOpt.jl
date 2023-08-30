@@ -1,5 +1,3 @@
-module Domains
-
 abstract type AbstractDomain end
 
 ##################################################################################################
@@ -71,7 +69,4 @@ Domain parameters for Topflow problems
 
         new(Lx, Ly, dx, dy, nely, nelx)
     end
-end
-
-
 end

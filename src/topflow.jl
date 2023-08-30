@@ -103,26 +103,34 @@ function call_dRESdg(dxv, dyv, muv, rhov, alpha, dalpha, in7)
 end
 
 
+mutable struct vectorized_constants
+    muv
+    rhov
+    dxv
+    dyv
+end
+
+
 """
     `topflow`
 
 Fluidic topology optimization
 """
-function topflow(problem_container::T, writeout::Bool = false) where {T<:TopflowContainer}
+function optimize(problem::T, writeout::Bool = false)::TopflowSolution where {T<:TopflowSolution}
 
     # TODO -- once analyticElement is replaced with pure Julia
     # JAC, RES, PHI, dPHIdg, dPHIds, dRESdg = analyticElement.generation()
 
     # TODO: do I need to error check the physical parameters, etc?
-    domain = problem_container.domain
-    fea = problem_container.fea
-    bc = problem_container.bc
-    continuation = problem_container.tc
-    solver_opts = problem_container.solver_opts
-    bkman = continuation.bkman
-    vf = problem_container.volfrac
-    μ = problem_container.mu
-    ρ = problem_container.rho
+    domain = problem.domain
+    fea = problem.fea
+    bc = problem.bc
+    continuation = problem.continuation
+    solver_opts = problem.solver_opts
+    bkman = problem.continuation.bkman
+    vf = problem.volfrac
+    μ = problem.mu
+    ρ = problem.rho
 
     ### Boundary conditions ctd
     # Nullspace matrices for imposing boundary conditions
@@ -161,8 +169,8 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     # Vectorized constants 
     dxv = domain.dx * ones(1, fea.neltot)
     dyv = domain.dy * ones(1, fea.neltot)
-    muv = problem_container.mu * ones(1, fea.neltot)
-    rhov = problem_container.rho * ones(1, fea.neltot)
+    muv = μ * ones(1, fea.neltot)
+    rhov = ρ * ones(1, fea.neltot)
 
     ### Output
     if writeout
@@ -170,14 +178,14 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
     end
 
     change_hist = Array{Float64}(undef, 0)
-    xPhys_hist = Array{Matrix{Float64}}(undef, 0)
+    # xPhys_hist = Array{Matrix{Float64}}(undef, 0)
     obj_hist = Array{Float64}(undef, 0)
 
     ### Begin optimization loop
     while loop <= solver_opts.maxiter
 
         # Greyscale indicator
-        Md = 100 * (4 * sum(xPhys .* (1 .- xPhys)) / fea.neltot)
+        # Md = 100 * (4 * sum(xPhys .* (1 .- xPhys)) / fea.neltot)
 
         # Material interpolator
         alpha =
@@ -265,8 +273,9 @@ function topflow(problem_container::T, writeout::Bool = false) where {T<:Topflow
         end
     end
 
+    # TODO -- need to check if converged somehow? ie, maintain a converged and set to false when it does NOT converge/ a numerical error
     # TODO -- what to return?
-    sol = TopflowSolution(problem_container, xPhys, loop, change_hist, obj_hist, xPhys_hist)
+    sol = TopflowSolution(xPhys, loop, change_hist, obj_hist)
 
     return sol
 end

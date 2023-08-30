@@ -9,9 +9,20 @@ struct Top88Solution
     xPhys::Matrix{Float64}
     converged::Bool = False
 
-    change_hist::Any
-    obj_hist::Any
-    xPhys_hist::Any
+    loop::Int32
+    change_hist::Vector{Float64}
+    obj_hist::Vector{Float64}
+    # xPhys_hist::Any
+
+    function Top88Solution(
+        xPhys::Matrix{Float64},
+        converged::Bool = False,
+        loop::Int64 = 0,
+        change_hist::Vector{Float64} = Vector{Float64}(),
+        obj_hist::Vector{Float64} = Vector{Float64}()
+    )
+        new(xPhys, converged, loop, change_hist, obj_hist)
+    end
 end
 
 ##################################################################################################
@@ -22,9 +33,20 @@ struct TophSolution
     xPhys::Matrix{Float64}
     converged::Bool = False
 
-    change_hist::Any
-    obj_hist::Any
-    xPhys_hist::Any
+    loop::Int32
+    change_hist::Vector{Float64}
+    obj_hist::Vector{Float64}
+    # xPhys_hist::Any
+
+    function TophSolution(
+        xPhys::Matrix{Float64},
+        converged::Bool=False,
+        loop::Int64 = 0,
+        change_hist::Vector{Float64} = Vector{Float64}(),
+        obj_hist::Vector{Float64} = Vector{Float64}()
+    )
+        new(xPhys, converged, loop, change_hist, obj_hist)
+    end
 end
 
 ##################################################################################################
@@ -32,25 +54,24 @@ end
 ##################################################################################################
 
 struct TopflowSolution
-    # TODO -- typehint the below
-    xPhys::Any
-    loop::Int64
-    change_hist::Any
-    obj_hist::Any
-    xPhys_hist::Any
+    xPhys::Matrix{Float64}
+    converged::Bool = False
 
-    converged::Bool
+    loop::Int64 = 0
+    change_hist::Vector{Float64}
+    obj_hist::Vector{Float64}
+    # xPhys_hist::Any
 
     function TopflowSolution(
         xPhys,
-        loop,
-        change_hist,
-        obj_hist,
-        xPhys_hist,
-        converged=True,
-    ) where {U<:TopflowContainer}
+        converged = False,
+        loop = 0,
+        change_hist = Vector{Float64}(),
+        obj_hist = Vector{Float64}(),
+        # xPhys_hist,
+    )
 
-        new{U}(problem_container, xPhys, loop, change_hist, obj_hist, xPhys_hist)
+        new(xPhys, converged, loop, change_hist, obj_hist, xPhys_hist)
     end
 end
 

@@ -37,9 +37,18 @@ where $\mathbf{x}$ denotes the design field,
 
 #### TopH
 
-Specifically, we are interested in a numerical minimization 
+Specifically, we are interested in a numerical minimization of the thermal
+compliance achievable within a unit square with the middle third of one edge
+removed.
 
 #### Topflow
+
+*Warning:* Topflow currently requires `MATLAB.jl`, which itself requires a
+working MATLAB installation before 2022a. See 
+[the `MATLAB.jl` page](https://github.com/JuliaInterop/MATLAB.jl) for
+more detail.
+
+Specifically, we are interested in a numerical minimization of 
 
 ## Installation
 

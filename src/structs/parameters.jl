@@ -12,11 +12,31 @@ Modified SIMP (solid isotropic material power) law parameter container. The fiel
 these are not used for TopFlow.
 """
 @kwdef struct ModifiedSIMPParameters <: Parameters
-    rmin::Float64
     penal::Float64
     
     E0::Float64 = 1.0
     Emin::Float64 = 1e-9
+end
+
+##################################################################################################
+# Topflow specific
+##################################################################################################
+
+abstract type Filter <: Parameters end
+
+"""
+Implements the sensitivity filter for Toph and Top88 problems
+"""
+@kwdef struct SensitivityFilter <: Filter
+    rmin::Float64 = 1.2
+end
+
+
+"""
+Implements the density filter for Toph and Top88 problems
+"""
+@kwdef struct DensityFilter <: Filter
+    rmin::Float64 = 1.2
 end
 
 ##################################################################################################
@@ -52,8 +72,8 @@ struct TopflowContinuation <: Parameters
     bkman::BrinkmanPenalizationParameters
 
     function TopflowContinuation(
-        volfrac::Float64 = (1/3),
         bkman::BrinkmanPenalizationParameters,
+        volfrac::Float64 = (1/3),
         conit::Int64 = 50,
     )
         ainit = bkman.alphamax / 100
@@ -68,10 +88,11 @@ struct TopflowContinuation <: Parameters
     end
 end
 
-"""
+"""@docs
 Topflow optimization and Newton solver parameters
 """
 @kwdef struct TopflowNumericals <: Parameters
+    # Main optimization loop 
     maxiter::Int64 = 200
     mvlim::Float64 = 0.2
     chlim::Float64 = 1e-3
@@ -83,7 +104,7 @@ Topflow optimization and Newton solver parameters
 end
 
 """
-
+Physical parameters for Topflow
 """
 @kwdef mutable struct TopflowPhysics <: Parameters
     Uin::Float64 = 1e0

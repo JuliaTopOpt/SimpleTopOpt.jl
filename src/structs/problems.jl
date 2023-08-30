@@ -4,9 +4,11 @@ abstract type TOProblem end
 """
 Creates a Top88 problem.
 """
-struct Top88Problem <: TOProblem
+struct Top88Problem{U, T} <: TOProblem where {U <: Optimizer, T <: Filter}
     domain::Top88Domain
     SIMP::SIMPParameters
+    optimizer::U
+    filter::T
 
     volfrac::Float64
 
@@ -16,10 +18,15 @@ struct Top88Problem <: TOProblem
     function Top88Container(
         t8dc::Top88Domain,
         SIMP::SIMPParameters,
+        optimizer::U,
         volfrac::Float64 = 0.5,
         nu::Float64 = 0.3,
         use_sensitivity::Bool = true,
-    )
+    ) where U <: Optimizer
+
+        if !(volfrac > 0.0 && volfrac < 1.0)
+            throw(DomainError(volfrac, "The volume fraction must be exclusively between 0 and 1."))
+        end
 
         if SIMP.E0 == 0.0
             throw(DomainError(SIMP.E0, "SIMP parameter E_0 must be non-zero for Top88 problems"))
@@ -32,16 +39,16 @@ struct Top88Problem <: TOProblem
     end
 end
 
+"""@docs
+Creates a TopH problem
 """
-Enough to specify a problem to Toph
-"""
-struct TophProblem{U} <: TOProblem where {U<:Optimizer}
+struct TophProblem{U, T} <: TOProblem where {U<:Optimizer, T <: Filter}
     domain::TophDomain
     volfrac::Float64
+    optimizer::U
+    filter::T
 
     simp::SIMPParameters
-
-    optimizer::U
 
     function TophContainer(
         thdc::TophDomain,
@@ -49,24 +56,20 @@ struct TophProblem{U} <: TOProblem where {U<:Optimizer}
         simp::SIMPParameters,
         optimizer::U    
     ) where {U<:Optimizer}
-
-        @assert nelx > 1
-        @assert nely > 1
-        @assert volfrac > 0.0 && volfrac < 1.0
+        if !(volfrac > 0.0 && volfrac < 1.0)
+            throw(DomainError(volfrac, "The volume fraction must be exclusively between 0 and 1."))
+        end
 
         new{U}(
             thdc,
             volfrac,
+            optimizer,
             simp,
-            optimizer
         )
-
     end
 end
 
-
 abstract type TopflowProblem <: TOProblem end
-
 
 """
 Topflow Problem Type 1 -- the double pipe problem
