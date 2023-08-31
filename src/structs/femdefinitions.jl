@@ -1,3 +1,9 @@
+module FEMDefinitions
+
+using ..Domains
+
+export TopflowFEA, FiniteElementDefinition
+
 abstract type FiniteElementDefinition end
 
 """
@@ -49,3 +55,5 @@ struct TopflowFEA <: FiniteElementDefinition
         new(neltot, doftot, nodx, nody, nodtot, edofMat, iJ, jJ, iR, jR, jE)
     end
 end
+
+end # End of module

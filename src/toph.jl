@@ -4,10 +4,9 @@ using LinearAlgebra
 using SparseArrays
 using Statistics
 
+using Structs
+
 export toph
-export OC
-export check
-export FE
 
 """
     toph(nelx, nely, volfrac, penal, rmin, write, loop_max)
@@ -36,7 +35,7 @@ function optimize(
         c = 0.0
 
         # FE Analysis
-        U = FE(nelx, nely, x, penal)
+        U = FE(nelx, nely, x, problem.SIMP.penal)
 
         KE = [
             2/3 -1/6 -1/3 -1/6

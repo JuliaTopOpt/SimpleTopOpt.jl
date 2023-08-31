@@ -4,11 +4,13 @@ using LinearAlgebra
 using SparseArrays
 using Statistics
 
+using ..Structs
+
 
 export optimize
 
 """
-    top88
+    optimize
 
 A direct, naive Julia port of Andreassen et al. "Efficient topology optimization in MATLAB
 using 88 lines of code." By default, this will reproduce the optimized MBB beam from Sigmund

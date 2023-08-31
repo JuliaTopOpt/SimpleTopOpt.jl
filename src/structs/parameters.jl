@@ -1,3 +1,8 @@
+module ParameterDefinitions
+"""
+This module defines structs maintaining input parameter values
+"""
+
 abstract type Parameters end
 
 ##################################################################################################
@@ -12,7 +17,7 @@ Modified SIMP (solid isotropic material power) law parameter container. The fiel
 these are not used for TopFlow.
 """
 @kwdef struct ModifiedSIMPParameters <: Parameters
-    penal::Float64
+    penal::Float64 = 3.0
     
     E0::Float64 = 1.0
     Emin::Float64 = 1e-9
@@ -112,4 +117,7 @@ Physical parameters for Topflow
     mu::Float64 = 1e0
 
     Renum::Float64 = undef
+end
+
+
 end

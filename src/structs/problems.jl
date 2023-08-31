@@ -1,3 +1,12 @@
+module Problems
+
+using ..Parameters
+using ..Optimizers
+using ..Domains
+using ..BoundaryConditions
+using ..FiniteElementDefinitions
+
+export Top88Problem, TophProblem, TopflowProblem, TOProblem, DoublePipeProblem, PipeBendProblem
 
 abstract type TOProblem end
 
@@ -16,13 +25,14 @@ struct Top88Problem{U, T} <: TOProblem where {U <: Optimizer, T <: Filter}
     use_sensitivity::Bool
 
     function Top88Container(
-        t8dc::Top88Domain,
+        domain::Top88Domain,
         SIMP::SIMPParameters,
         optimizer::U,
+        filter::T,
         volfrac::Float64 = 0.5,
         nu::Float64 = 0.3,
         use_sensitivity::Bool = true,
-    ) where U <: Optimizer
+    ) where {U <: Optimizer, T <: Filter}
 
         if !(volfrac > 0.0 && volfrac < 1.0)
             throw(DomainError(volfrac, "The volume fraction must be exclusively between 0 and 1."))
@@ -34,8 +44,7 @@ struct Top88Problem{U, T} <: TOProblem where {U <: Optimizer, T <: Filter}
             throw(DomainError(SIMP.Emin, "SIMP parameter E_min must be non-zero for Top88 problems"))
         end
         
-
-        new(t8dc, SIMP, volfrac, nu, use_sensitivity)
+        new(domain, SIMP, optimizer, filter, volfrac, nu, use_sensitivity)
     end
 end
 
@@ -76,7 +85,7 @@ Topflow Problem Type 1 -- the double pipe problem
 """
 struct DoublePipeProblem{U<:Optimizer} <: TopflowProblem
     domain::TopflowDomain
-    tc::TopflowContinuation
+    continuation::TopflowContinuation
     solver_opts::TopflowOptNSParams # TODO: give this a better name
     bkman::BrinkmanPenalizationParameters
     volfrac::Float64
@@ -127,7 +136,7 @@ Topflow Problem Type 2 -- the pipe bend problem
 """
 struct PipeBendProblem{U<:Optimizer} <: TopflowProblem
     domain::TopflowDomain
-    tc::TopflowContinuation
+    continuation::TopflowContinuation
     solver_opts::TopflowNonlinearNewt
     bkman::BrinkmanPenalizationParameters
     volfrac::Float64
@@ -171,4 +180,6 @@ struct PipeBendProblem{U<:Optimizer} <: TopflowProblem
             physicals
         )
     end
+end
+
 end

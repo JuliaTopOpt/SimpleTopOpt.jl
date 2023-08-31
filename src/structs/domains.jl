@@ -1,3 +1,12 @@
+module Domains
+
+using ..ParameterDefinitions
+
+export AbstractDomain, AbstractTop88Domain, AbstractTophDomain, AbstractTopflowDomain
+export Top88Domain
+export TophDomain
+export TopflowDomain
+
 abstract type AbstractDomain end
 
 ##################################################################################################
@@ -69,4 +78,6 @@ Domain parameters for Topflow problems
 
         new(Lx, Ly, dx, dy, nely, nelx)
     end
+end
+
 end

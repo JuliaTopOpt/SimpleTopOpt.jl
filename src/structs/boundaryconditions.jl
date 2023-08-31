@@ -1,3 +1,9 @@
+module BoundaryConditionDefinitions
+
+using ..ParameterDefinitions
+using ..FEMDefinitions
+using ..Domains
+
 abstract type BoundaryConditions end
 
 ##################################################################################################
@@ -141,4 +147,6 @@ struct PipeBendBC <: TopflowBoundaryConditions
 
         new(fixedDofs, DIR, fixedDofsTBy, inletLength)
     end
+end
+
 end

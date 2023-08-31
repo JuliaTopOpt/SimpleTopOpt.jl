@@ -9,9 +9,11 @@ using FillArrays
 using MATLAB
 using Statistics
 
-import ..TopflowContainer,
-    ..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
-export topflow
+using ..Structs
+
+# import ..TopflowContainer,
+    #..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
+export optimize
 
 const _dir = @__DIR__
 
