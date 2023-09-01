@@ -3,6 +3,10 @@ module ParameterDefinitions
 This module defines structs maintaining input parameter values
 """
 
+export Parameters, Filter
+export ModifiedSIMPParameters, DensityFilter, SensitivityFilter, BrinkmanPenalizationParameters
+export TopflowContinuation, TopflowPhysics, TopflowNumericals
+
 abstract type Parameters end
 
 ##################################################################################################

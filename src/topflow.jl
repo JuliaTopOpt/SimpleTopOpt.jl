@@ -12,7 +12,7 @@ using Statistics
 using ..Structs
 
 # import ..TopflowContainer,
-    #..TopflowOptNSParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
+    #..TopflowNumericalsParams, ..TopflowBoundaryConditions, ..TopflowFEA, ..TopflowSolution
 export optimize
 
 const _dir = @__DIR__

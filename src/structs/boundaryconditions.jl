@@ -4,6 +4,9 @@ using ..ParameterDefinitions
 using ..FEMDefinitions
 using ..Domains
 
+export BoundaryConditions, Top88BoundaryConditions, TophBoundaryConditions
+export DoublePipeBC, PipeBendBC
+
 abstract type BoundaryConditions end
 
 ##################################################################################################

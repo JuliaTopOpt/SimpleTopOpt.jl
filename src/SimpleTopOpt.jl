@@ -2,13 +2,7 @@ module SimpleTopOpt
 
 using Reexport
 
-include("structs/parameters.jl")
-include("structs/domains.jl")
-include("structs/optimizers.jl")
-include("structs/boundaryconditions.jl")
-include("structs/femdefinitions.jl")
-include("structs/problems.jl")
-
+include("structs.jl")
 include("top88.jl")
 include("toph.jl")
 include("topflow.jl")

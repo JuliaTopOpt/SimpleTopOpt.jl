@@ -7,7 +7,7 @@ export Top88Solution, TophSolution, TopflowSolution
 ##################################################################################################
 struct Top88Solution
     xPhys::Matrix{Float64}
-    converged::Bool = False
+    converged::Bool
 
     loop::Int32
     change_hist::Vector{Float64}
@@ -31,7 +31,7 @@ end
 
 struct TophSolution
     xPhys::Matrix{Float64}
-    converged::Bool = False
+    converged::Bool
 
     loop::Int32
     change_hist::Vector{Float64}
@@ -55,9 +55,9 @@ end
 
 struct TopflowSolution
     xPhys::Matrix{Float64}
-    converged::Bool = False
+    converged::Bool
 
-    loop::Int64 = 0
+    loop::Int64
     change_hist::Vector{Float64}
     obj_hist::Vector{Float64}
     # xPhys_hist::Any

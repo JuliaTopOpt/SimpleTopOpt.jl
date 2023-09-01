@@ -21,6 +21,9 @@ thermal compliance, and fluid flows. The package is primarily accessed through
 the `optimize` function and problem containers `Top88Problem`, `TophProblem`,
 `DoublePipeProblem`, and `PipeBendProblem`, the latter two of which are both fluid flow problems.
 
+See the examples folder for usage.
+
+
 #### Top88
 
 Specifically, we are interested in the numerical minimization of the structural compliance achievable in a rectangular domain.

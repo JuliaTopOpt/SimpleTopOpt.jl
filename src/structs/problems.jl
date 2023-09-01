@@ -1,10 +1,10 @@
 module Problems
 
-using ..Parameters
+using ..ParameterDefinitions
 using ..Optimizers
 using ..Domains
-using ..BoundaryConditions
-using ..FiniteElementDefinitions
+using ..BoundaryConditionDefinitions
+using ..FEMDefinitions
 
 export Top88Problem, TophProblem, TopflowProblem, TOProblem, DoublePipeProblem, PipeBendProblem
 
@@ -15,7 +15,7 @@ Creates a Top88 problem.
 """
 struct Top88Problem{U, T} <: TOProblem where {U <: Optimizer, T <: Filter}
     domain::Top88Domain
-    SIMP::SIMPParameters
+    SIMP::ModifiedSIMPParameters
     optimizer::U
     filter::T
 
@@ -26,7 +26,7 @@ struct Top88Problem{U, T} <: TOProblem where {U <: Optimizer, T <: Filter}
 
     function Top88Container(
         domain::Top88Domain,
-        SIMP::SIMPParameters,
+        SIMP::ModifiedSIMPParameters,
         optimizer::U,
         filter::T,
         volfrac::Float64 = 0.5,
@@ -44,7 +44,7 @@ struct Top88Problem{U, T} <: TOProblem where {U <: Optimizer, T <: Filter}
             throw(DomainError(SIMP.Emin, "SIMP parameter E_min must be non-zero for Top88 problems"))
         end
         
-        new(domain, SIMP, optimizer, filter, volfrac, nu, use_sensitivity)
+        new{U,T}(domain, SIMP, optimizer, filter, volfrac, nu, use_sensitivity)
     end
 end
 
@@ -53,27 +53,29 @@ Creates a TopH problem
 """
 struct TophProblem{U, T} <: TOProblem where {U<:Optimizer, T <: Filter}
     domain::TophDomain
-    volfrac::Float64
+    simp::ModifiedSIMPParameters
     optimizer::U
     filter::T
 
-    simp::SIMPParameters
+    volfrac::Float64
 
     function TophContainer(
-        thdc::TophDomain,
-        volfrac::Float64, 
-        simp::SIMPParameters,
-        optimizer::U    
-    ) where {U<:Optimizer}
+        domain::TophDomain,
+        simp::ModifiedSIMPParameters,
+        optimizer::U,
+        filter::T,
+        volfrac::Float64 = 0.4, 
+    ) where {U<:Optimizer, T <: Filter}
         if !(volfrac > 0.0 && volfrac < 1.0)
             throw(DomainError(volfrac, "The volume fraction must be exclusively between 0 and 1."))
         end
 
-        new{U}(
-            thdc,
-            volfrac,
-            optimizer,
+        new{U, T}(
+            domain,
             simp,
+            optimizer,
+            filter,
+            volfrac,
         )
     end
 end
@@ -86,7 +88,7 @@ Topflow Problem Type 1 -- the double pipe problem
 struct DoublePipeProblem{U<:Optimizer} <: TopflowProblem
     domain::TopflowDomain
     continuation::TopflowContinuation
-    solver_opts::TopflowOptNSParams # TODO: give this a better name
+    solver_opts::TopflowNumericals
     bkman::BrinkmanPenalizationParameters
     volfrac::Float64
     optimizer::U
@@ -100,9 +102,9 @@ struct DoublePipeProblem{U<:Optimizer} <: TopflowProblem
         domain::TopflowDomain,
         volfrac::Float64,
         optimizer::U,
-        OptNSParams::TopflowOptNSParams,
+        solver_opts::TopflowNumericals,
         physicals::TopflowPhysics,
-    ) where {U<:OptimizerContainer}
+    ) where {U<:Optimizer}
 
         @assert volfrac > 0.0 && volfrac < 1.0
 
@@ -137,7 +139,7 @@ Topflow Problem Type 2 -- the pipe bend problem
 struct PipeBendProblem{U<:Optimizer} <: TopflowProblem
     domain::TopflowDomain
     continuation::TopflowContinuation
-    solver_opts::TopflowNonlinearNewt
+    solver_opts::TopflowNumericals
     bkman::BrinkmanPenalizationParameters
     volfrac::Float64
     optimizer::U
@@ -154,7 +156,7 @@ struct PipeBendProblem{U<:Optimizer} <: TopflowProblem
         volfrac::Float64,
         optimizer::U,
         physicals::TopflowPhysics = TopflowPhysics(),
-
+        numericals::TopflowNumericals = TopflowNumericals()
     ) where {U<:Optimizer}
 
         @assert volfrac > 0.0 && volfrac < 1.0
@@ -162,7 +164,6 @@ struct PipeBendProblem{U<:Optimizer} <: TopflowProblem
         fea = TopflowFEA(domain)
         bc = PipeBendBC(domain, fea, Uin)
 
-        solver_opts = TopflowOptNSParams()
         bkman = BrinkmanPenalizationParameters(mu)
         tc = TopflowContinuation(volfrac, bkman)
 
@@ -171,7 +172,7 @@ struct PipeBendProblem{U<:Optimizer} <: TopflowProblem
         new{U}(
             domain,
             tc,
-            solver_opts,
+            numericals,
             bkman,
             volfrac,
             optimizer,

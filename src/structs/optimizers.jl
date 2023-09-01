@@ -1,6 +1,6 @@
 module Optimizers
 
-export OptimalityCriteria
+export OptimalityCriteria, Optimizer
 """
 This module defines the optimization techniques available for use
 and structs to maintain relevant parameters.

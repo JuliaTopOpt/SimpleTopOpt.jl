@@ -4,7 +4,7 @@ using LinearAlgebra
 using SparseArrays
 using Statistics
 
-using Structs
+using ..Structs
 
 export toph
 
@@ -15,10 +15,10 @@ A direct, naive Julia port of the `toph` code listing from "Topology Optimizatio
 by Martin Bendsøe and Ole Sigmund.
 """
 function optimize(
-    problem::TophProblem{U},
+    problem::TophProblem{T},
     write::Bool = false,
     loop_max::Int = 100,
-)::TophSolution where {U<:Optimizer}
+)::TophSolution where {T<:Optimizer}
     # Initialization
 
     penal = problem.SIMP.penal
