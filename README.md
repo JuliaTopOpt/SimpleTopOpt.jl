@@ -108,10 +108,8 @@ sol = SimpleTopOpt.TopFlow.optimize(pbp)
 heatmap(sol.design)
 ```
 
-## Installation
+## Acknowledgements
 
-<> (TODO -- list it on julia package repository and write this?)
+Thanks to Mohamed Tarek and Yuqing Zhou for their advice over
+summer 2023 as the initial development was underway.
 
-## References and Citations
-
-<> (TODO -- fill this out and cite this instead of the above links?)
