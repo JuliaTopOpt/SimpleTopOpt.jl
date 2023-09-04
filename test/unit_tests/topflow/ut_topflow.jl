@@ -31,7 +31,7 @@ using MAT
     @test_throws AssertionError TopflowDomain(1.0, 1.0, 0)
 
     bkman_param = BrinkmanPenalizationParameters(mu)
-    cont = SimpleTopOpt.TopflowContinuation(volfrac, bkman_param, conit)
+    cont = SimpleTopOpt.TopflowContinuation(bkman_param, volfrac, conit)
 
     @testset "Easy parameter checks" begin
         # Brinkman penalization
@@ -89,8 +89,9 @@ using MAT
         @test norm(vars["jE"] - fea.jE) ≈ 0
     end
 
-    optimizer = OCParameters(200, 0.2)
-
+    optimizer = OptimalityCriteria()
+    solver_opts = TopflowNumericals()
+    physicals = TopflowPhysicals()
     ### Problem 1
 
     dpbc = SimpleTopOpt.DoublePipeBC(domain, fea, Uin)
@@ -105,13 +106,13 @@ using MAT
         @test norm(vars["DIR"] - dpbc.DIR) ≈ 0
     end
 
-    dpc = DoublePipeContainer(domain, volfrac, optimizer, Uin, rho, mu)
+    dpc = DoublePipeProblem(domain, volfrac, optimizer, solver_opts, physicals)
     @testset "Douple Pipe Container construction" begin
-        @test dpc.Renum ≈ 0.166666666666666
+        @test dpc.physics.Renum ≈ 0.166666666666666
 
-        @test_throws AssertionError DoublePipeContainer(domain, 1.0, optimizer, Uin, rho, mu)
-        @test_throws AssertionError DoublePipeContainer(domain, -1.0, optimizer, Uin, rho, mu)
-        @test_throws AssertionError DoublePipeContainer(domain, 0.0, optimizer, Uin, rho, mu)
+        @test_throws AssertionError DoublePipeProblem(domain, 1.0, optimizer)
+        @test_throws AssertionError DoublePipeProblem(domain, -1.0, optimizer)
+        @test_throws AssertionError DoublePipeProblem(domain, 0.0, optimizer)
     end
 
     ### Problem 2
@@ -130,13 +131,13 @@ using MAT
         @test pbbc.inletLength == 6.0
     end
 
-    pbc = PipeBendContainer(domain, volfrac, optimizer, Uin, rho, mu)
+    pbc = PipeBendProblem(domain, volfrac, optimizer)
     @testset "Pipe Bend Container construction" begin
-        @test pbc.Renum ≈ 0.2
+        @test pbc.physics.Renum ≈ 0.2
 
-        @test_throws AssertionError PipeBendContainer(domain, 1.0, optimizer, Uin, rho, mu)
-        @test_throws AssertionError PipeBendContainer(domain, -1.0, optimizer, Uin, rho, mu)
-        @test_throws AssertionError PipeBendContainer(domain, 0.0, optimizer, Uin, rho, mu)
+        @test_throws AssertionError PipeBendProblem(domain, 1.0, optimizer)
+        @test_throws AssertionError PipeBendProblem(domain, -1.0, optimizer)
+        @test_throws AssertionError PipeBendProblem(domain, 0.0, optimizer)
 
     end
 

@@ -148,7 +148,7 @@ struct PipeBendBC <: TopflowBoundaryConditions
         DIRU[fixedDofsInX] = Uinlet'
         DIR = [DIRU; DIRP]
 
-        new(fixedDofs, DIR, fixedDofsTBy, inletLength)
+        new(fixedDofs, DIR, inletLength)
     end
 end
 

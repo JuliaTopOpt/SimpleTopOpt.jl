@@ -5,7 +5,7 @@ This module defines structs maintaining input parameter values
 
 export Parameters, Filter
 export ModifiedSIMPParameters, DensityFilter, SensitivityFilter, BrinkmanPenalizationParameters
-export TopflowContinuation, TopflowPhysics, TopflowNumericals
+export TopflowContinuation, TopflowPhysicals, TopflowNumericals
 
 abstract type Parameters end
 
@@ -17,7 +17,7 @@ abstract type Parameters end
     ModifiedSIMPParameters
 
 Modified SIMP (solid isotropic material power) law parameter container. The fields
-`E0` and `Emin` are required for Top88 problems, though default values are given;
+`E0` and `Emin` are required for Top88 and TopH problems, though default values are given;
 these are not used for TopFlow.
 """
 @kwdef struct ModifiedSIMPParameters <: Parameters
@@ -115,12 +115,20 @@ end
 """
 Physical parameters for Topflow
 """
-@kwdef mutable struct TopflowPhysics <: Parameters
+@kwdef mutable struct TopflowPhysicals <: Parameters
     Uin::Float64 = 1e0
     rho::Float64 = 1e0
     mu::Float64 = 1e0
+end
 
-    Renum::Float64 = undef
+abstract type internal_parameters <: Parameters end
+
+mutable struct TopflowPhysics <: internal_parameters
+    Uin::Float64
+    rho::Float64
+    mu::Float64
+
+    Renum::Float64
 end
 
 

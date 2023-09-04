@@ -80,4 +80,9 @@ Domain parameters for Topflow problems
     end
 end
 
+total_size(domain::U) where U <: AbstractDomain = domain.nelx * domain.nely
+
+
+
+
 end

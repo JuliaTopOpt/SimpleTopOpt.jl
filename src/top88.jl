@@ -18,20 +18,23 @@ using 88 lines of code." By default, this will reproduce the optimized MBB beam 
 
 """
 function optimize(
-    problem_container::Top88Problem,
+    problem::Top88Problem,
     writeout::Bool = false,
     loop_max::Int = 1000,
 )::Top88Solution
 
-    nelx = problem_container.t8dc.nelx
-    nely = problem_container.t8dc.nely
+    nelx = problem.domain.nelx
+    nely = problem.domain.nely
 
-    rmin = problem_container.SIMP.rmin
-    penal = problem_container.SIMP.penal
-    E0 = problem_container.SIMP.E0
-    Emin = problem_container.SIMP.Emin
+    rmin = problem.filter.rmin
+    penal = problem.SIMP.penal
+    E0 = problem.SIMP.E0
+    Emin = problem.SIMP.Emin
 
-    KE = Top88FEA(nu).KE
+    nu = problem.nu
+    volfrac = problem.volfrac
+
+    KE = Top88FEA(nu)
 
     nodenrs = reshape(1:(1+nelx)*(1+nely), 1 + nely, 1 + nelx)
     edofVec = reshape(2 * nodenrs[1:end-1, 1:end-1] .+ 1, nelx * nely, 1)
@@ -56,7 +59,7 @@ function optimize(
     freedofs = setdiff(alldofs, fixeddofs)
 
     # Prepare the filter
-    H, Hs = prepare_filter(nelx, nely)
+    H, Hs = prepare_filter(problem.domain, rmin)
 
     # Initialize iteration
     x = volfrac * ones(nely, nelx)
@@ -86,19 +89,14 @@ function optimize(
         dv = ones(nely, nelx)
 
         # Filtering/ modification of sensitivities
-        if ft
-            dc[:] = H * (x[:] .* dc[:]) ./ Hs ./ max(1e-3, maximum(x[:]))
-        else
-            dc[:] = H * (dc[:] ./ Hs)
-            dv[:] = H * (dv[:] ./ Hs)
-        end
+        dc, dv = filter_implementation(problem.filter, x, dc, dv, H, Hs)
 
         # Optimality criteria update of design variables and physical densities
-        xnew = OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
+        xnew = OC(nelx, nely, x, volfrac, dc, dv, H, Hs, problem.filter)
         change = maximum(abs.(x - xnew))
         x = xnew
 
-        if writeout 
+        if writeout
             println(
                 "Loop = ",
                 loop,
@@ -113,7 +111,13 @@ function optimize(
         loop >= loop_max && break
     end
 
-    return x
+    converged = change <= 0.01
+
+    return Top88Solution(
+        x,
+        converged,
+        loop,
+    )
 end
 
 
@@ -129,9 +133,32 @@ end
 
 
 """
+
+"""
+function filter_implementation(s::SensitivityFilter, x, dc::Matrix{Float64}, dv::Matrix{Float64}, H, Hs)
+    dc[:] = H * (x[:] .* dc[:]) ./ Hs ./ max(1e-3, maximum(x[:]))
+
+    return dc, dv
+end
+
+"""
+
+"""
+function filter_implementation(d::DensityFilter, x, dc::Matrix{Float64}, dv::Matrix{Float64}, H, Hs)
+    dc[:] = H * (dc[:] ./ Hs)
+    dv[:] = H * (dv[:] ./ Hs)
+
+    return dc, dv
+end
+
+"""
 Prepare sensitivity/ density filter
 """
-function prepare_filter(nelx::S, nely::S) where {S<:Integer}
+function prepare_filter(domain::Top88Domain, rmin::Float64)
+    
+    nelx = domain.nelx
+    nely = domain.nely
+
     iH = ones(nelx * nely * (2 * (convert(Int64, ceil(rmin) - 1)) + 1)^2)
     jH = ones(size(iH))
     sH = zeros(size(iH))
@@ -160,15 +187,16 @@ end
 Optimality criteria update
 """
 function OC(
-    nelx::S,
-    nely,
+    nelx::Int64,
+    nely::Int64,
     x,
-    volfrac,
-    dc::Matrix{T},
-    dv,
-    xPhys::Matrix{T},
-    ft::Bool,
-) where {S<:Integer,T<:AbstractFloat}
+    volfrac::Float64,
+    dc::Matrix{Float64},
+    dv::Matrix{Float64},
+    H,
+    Hs,
+    filter::U,
+) where U <: Filter
     l1 = 0
     l2 = 1e9
     move = 0.2
@@ -185,12 +213,8 @@ function OC(
                 xnew[j, i] = max(0.000, max(xji - move, min(1, min(xji + move, XB[j, i]))))
             end
         end
-
-        if ft
-            xPhys = xnew
-        else
-            xPhys[:] = (H * xnew[:]) ./ Hs
-        end
+        
+        xPhys = OC_update_filter(filter, xnew, H, Hs)
 
         if sum(xPhys[:]) > volfrac * nelx * nely
             l1 = lmid
@@ -201,5 +225,15 @@ function OC(
 
     return xnew
 end
+
+# NOTE -- the below function signatures are gross. Can this be avoided.
+function OC_update_filter(s::SensitivityFilter, xnew, H, Hs)
+    return xnew
+end
+
+function OC_update_filter(d::DensityFilter, xnew, H, Hs)
+    return (H * xnew[:]) ./ Hs
+end
+
 
 end

@@ -118,7 +118,7 @@ end
 
 Fluidic topology optimization
 """
-function optimize(problem::T, writeout::Bool = false)::TopflowSolution where {T<:TopflowSolution}
+function optimize(problem::T, writeout::Bool = false)::TopflowSolution where {T<:TopflowProblem}
 
     # TODO -- once analyticElement is replaced with pure Julia
     # JAC, RES, PHI, dPHIdg, dPHIds, dRESdg = analyticElement.generation()
@@ -131,8 +131,8 @@ function optimize(problem::T, writeout::Bool = false)::TopflowSolution where {T<
     solver_opts = problem.solver_opts
     bkman = problem.continuation.bkman
     vf = problem.volfrac
-    μ = problem.mu
-    ρ = problem.rho
+    μ = problem.physics.mu
+    ρ = problem.physics.rho
 
     ### Boundary conditions ctd
     # Nullspace matrices for imposing boundary conditions
@@ -256,7 +256,7 @@ function optimize(problem::T, writeout::Bool = false)::TopflowSolution where {T<
         # Optimality criteria update of design variables and physical densities
 
         # TODO -- refactor into doing this in-place?
-        xPhys = OCUpdate(xPhys, sens, dV, problem_container)
+        xPhys = OCUpdate(xPhys, sens, dV, problem)
 
         # NOTE -- UPDATE ALL LISTS HERE
         # append!(xPhys_hist, xPhys)
@@ -277,7 +277,9 @@ function optimize(problem::T, writeout::Bool = false)::TopflowSolution where {T<
 
     # TODO -- need to check if converged somehow? ie, maintain a converged and set to false when it does NOT converge/ a numerical error
     # TODO -- what to return?
-    sol = TopflowSolution(xPhys, loop, change_hist, obj_hist)
+    converged = true   
+
+    sol = TopflowSolution(xPhys, converged, loop, change_hist, obj_hist)
 
     return sol
 end

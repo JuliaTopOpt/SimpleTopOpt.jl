@@ -15,11 +15,17 @@ A direct, naive Julia port of the `toph` code listing from "Topology Optimizatio
 by Martin Bendsøe and Ole Sigmund.
 """
 function optimize(
-    problem::TophProblem{T},
+    problem::TophProblem{T, S},
     write::Bool = false,
     loop_max::Int = 100,
-)::TophSolution where {T<:Optimizer}
+)::TophSolution where {T<:Optimizer, S <: Filter}
     # Initialization
+    nely = problem.domain.nely   
+    nelx = problem.domain.nelx
+
+    rmin = problem.filter.rmin
+
+    volfrac = problem.volfrac
 
     penal = problem.SIMP.penal
 
@@ -70,8 +76,11 @@ function optimize(
         loop >= loop_max && break
     end
 
-    return Top88Solution(
+    converged = loop >= loop_max
 
+    return TophSolution(
+        x,
+        converged,
     )
 end
 

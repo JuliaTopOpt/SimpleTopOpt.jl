@@ -8,35 +8,6 @@ Unit test runner
 
 all_tests = (isempty(ARGS) || "all" in ARGS)
 
-
-
-if all_tests || "top88" in ARGS
-    println("Beginning Top88 suite...")
-    @testset "Top88 Suite" begin
-        @testset "Unit tests" begin
-            include("unit_tests/top88/ut_top88.jl")
-        end
-        @testset "Integration" begin
-            include("unit_tests/top88/int_top88.jl")
-        end
-    end
-    println("Finished Top88 suite...")
-end
-
-
-if all_tests || "toph" in ARGS
-    println("Beginning TopH suite...")
-    @testset "TopH Suite" begin
-        @testset "Unit tests" begin
-            include("unit_tests/toph/ut_toph.jl")
-        end
-        @testset "Integration" begin
-            include("unit_tests/toph/int_toph.jl")
-        end
-    end
-    println("Finished TopH suite...")
-end
-
 if all_tests || "topflow" in ARGS
     println("Beginning topflow suite...")
     
@@ -69,3 +40,31 @@ if all_tests || "topflow" in ARGS
 
     println("Finished Topflow Suite...")
 end
+
+if all_tests || "top88" in ARGS
+    println("Beginning Top88 suite...")
+    @testset "Top88 Suite" begin
+        @testset "Unit tests" begin
+            include("unit_tests/top88/ut_top88.jl")
+        end
+        @testset "Integration" begin
+            include("unit_tests/top88/int_top88.jl")
+        end
+    end
+    println("Finished Top88 suite...")
+end
+
+
+if all_tests || "toph" in ARGS
+    println("Beginning TopH suite...")
+    @testset "TopH Suite" begin
+        @testset "Unit tests" begin
+            include("unit_tests/toph/ut_toph.jl")
+        end
+        @testset "Integration" begin
+            include("unit_tests/toph/int_toph.jl")
+        end
+    end
+    println("Finished TopH suite...")
+end
+

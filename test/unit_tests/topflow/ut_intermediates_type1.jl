@@ -20,11 +20,11 @@ const conit = 50
 
 domain = TopflowDomain(Lx, Ly, nely)
 bkman = BrinkmanPenalizationParameters(mu)
-cont = SimpleTopOpt.TopflowContinuation(volfrac, bkman, conit)
+cont = SimpleTopOpt.TopflowContinuation(bkman, volfrac, conit)
 fea = SimpleTopOpt.TopflowFEA(domain)
-optimizer = OCParameters(200, 0.2)
+optimizer = OptimalityCriteria()
 bc = SimpleTopOpt.DoublePipeBC(domain, fea, Uin)
-problem_container = DoublePipeContainer(domain, volfrac, optimizer, Uin, rho, mu)
+problem_container = DoublePipeProblem(domain, volfrac, optimizer)
 
 ### TODO -- the next segment should not be copy-pasted
 EN = Diagonal(I, fea.doftot)
@@ -62,8 +62,8 @@ qa = cont.qavec[1]
 # Vectorized constants 
 dxv = domain.dx * ones(1, fea.neltot)
 dyv = domain.dy * ones(1, fea.neltot)
-muv = problem_container.mu * ones(1, fea.neltot)
-rhov = problem_container.rho * ones(1, fea.neltot)
+muv = problem_container.physics.mu * ones(1, fea.neltot)
+rhov = problem_container.physics.rho * ones(1, fea.neltot)
 
 alpha =
     bkman.alphamin .+

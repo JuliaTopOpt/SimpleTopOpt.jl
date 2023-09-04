@@ -16,12 +16,12 @@ using SimpleTopOpt.TopFlow
 
     domain = TopflowDomain(Lx, Ly, nely)
     fea = SimpleTopOpt.TopflowFEA(domain)
-    optimizer = OCParameters(200, 0.2)
+    optimizer = OptimalityCriteria()
     dpbc = SimpleTopOpt.DoublePipeBC(domain, fea, Uin)
-    dpc = DoublePipeContainer(domain, volfrac, optimizer)
+    dpc = DoublePipeProblem(domain, volfrac, optimizer)
 
-    sol = SimpleTopOpt.TopFlow.topflow(dpc)
-    t_xPhys = sol.xPhys
+    sol = SimpleTopOpt.TopFlow.optimize(dpc)
+    t_xPhys = sol.design
 
     @test size(r_xPhys) == size(t_xPhys)
     
@@ -42,12 +42,12 @@ end
 
     domain = TopflowDomain(Lx, Ly, nely)
     feaw = SimpleTopOpt.TopflowFEA(domain)
-    optimizer = OCParameters(200, 0.2)
+    optimizer = OptimalityCriteria()
     pbbc = SimpleTopOpt.PipeBendBC(domain, fea, Uin)
-    pbc = PipeBendContainer(domain, volfrac, optimizer)
+    pbc = PipeBendProblem(domain, volfrac, optimizer)
 
-    sol = SimpleTopOpt.TopFlow.topflow(pbc)
-    t_xPhys = sol.xPhys
+    sol = SimpleTopOpt.TopFlow.optimize(pbc)
+    t_xPhys = sol.design
 
     @test size(r_xPhys) == size(t_xPhys)
 

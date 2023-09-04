@@ -6,7 +6,7 @@ export Top88Solution, TophSolution, TopflowSolution
 # Top88 solution
 ##################################################################################################
 struct Top88Solution
-    xPhys::Matrix{Float64}
+    design::Matrix{Float64}
     converged::Bool
 
     loop::Int32
@@ -15,13 +15,13 @@ struct Top88Solution
     # xPhys_hist::Any
 
     function Top88Solution(
-        xPhys::Matrix{Float64},
+        design::Matrix{Float64},
         converged::Bool = False,
         loop::Int64 = 0,
         change_hist::Vector{Float64} = Vector{Float64}(),
         obj_hist::Vector{Float64} = Vector{Float64}()
     )
-        new(xPhys, converged, loop, change_hist, obj_hist)
+        new(design, converged, loop, change_hist, obj_hist)
     end
 end
 
@@ -30,7 +30,7 @@ end
 ##################################################################################################
 
 struct TophSolution
-    xPhys::Matrix{Float64}
+    design::Matrix{Float64}
     converged::Bool
 
     loop::Int32
@@ -39,13 +39,13 @@ struct TophSolution
     # xPhys_hist::Any
 
     function TophSolution(
-        xPhys::Matrix{Float64},
+        design::Matrix{Float64},
         converged::Bool=False,
         loop::Int64 = 0,
         change_hist::Vector{Float64} = Vector{Float64}(),
         obj_hist::Vector{Float64} = Vector{Float64}()
     )
-        new(xPhys, converged, loop, change_hist, obj_hist)
+        new(design, converged, loop, change_hist, obj_hist)
     end
 end
 
@@ -54,7 +54,7 @@ end
 ##################################################################################################
 
 struct TopflowSolution
-    xPhys::Matrix{Float64}
+    design::Matrix{Float64}
     converged::Bool
 
     loop::Int64
@@ -63,15 +63,14 @@ struct TopflowSolution
     # xPhys_hist::Any
 
     function TopflowSolution(
-        xPhys,
+        design::Matrix{Float64},
         converged = False,
         loop = 0,
         change_hist = Vector{Float64}(),
         obj_hist = Vector{Float64}(),
         # xPhys_hist,
     )
-
-        new(xPhys, converged, loop, change_hist, obj_hist, xPhys_hist)
+        new(design, converged, loop, change_hist, obj_hist)
     end
 end
 
