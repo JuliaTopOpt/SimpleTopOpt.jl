@@ -21,28 +21,56 @@ thermal compliance, and fluid flows. The package is primarily accessed through
 the `optimize` function and problem containers `Top88Problem`, `TophProblem`,
 `DoublePipeProblem`, and `PipeBendProblem`, the latter two of which are both fluid flow problems.
 
-See the examples folder for usage.
-
 
 #### Top88
 
-Specifically, we are interested in the numerical minimization of the structural compliance achievable in a rectangular domain.
+This solves the classical MBB beam problem,
+where specifically we seek to minimize the compliance of a structure within a rectangular domain, on which a load is placed
+on the top left corner; the left side and bottom right corner are fixed.
 
-$$
-\begin{align*}
-    \min_\mathbf{x} : & c(\mathbf{x}) = \mathbf{U}\mathbf{K}\mathbf{U} = \sum^N_{e=1} E_e(x_e) \mathbf{u}_e^T \mathbf{k}_0 \mathbf{u}_e\\
-    \text{subject to } : & \mathbf{K}\mathbf{U} = \mathbf{F}\\
-    \mathbf{0} \leq \mathbf{x} \leq \mathbf{1}
-\end{align*}
-$$
+We expect a structure composed of triangles eventually connecting the two fixed components.
 
-where $\mathbf{x}$ denotes the design field, 
+```julia
+domain_1 = Top88Domain(60, 40)
+
+SIMP = ModifiedSIMPParameters(penal=3.0)
+optimizer = OptimalityCritera()
+filter = SensitivityFilter()
+
+problem = Top88Problem(domain, SIMP, optimizer, filter)
+
+sol = SimpleTopOpt.Top88.optimize(problem)
+
+heatmap(sol.design)
+```
 
 #### TopH
 
-Specifically, we are interested in a numerical minimization of the thermal
-compliance achievable within a unit square with the middle third of one edge
-removed.
+This solves a classical thermal compliance
+problem, where specifically we seek to minimize the thermal compliance achievable in a unit square domain wherein the top
+middle third is removed, allowing heat to
+escape, while the domain is constantly and
+evenly heated.
+
+We expect a symmetric structure branching out like tree roots as
+to maximize the surface area.
+
+```julia
+using SimpleTopOpt
+using Plots
+
+domain = TophDomain(40, 40)
+
+SIMP = ModifiedSIMPParameters(penal=3.0)
+optimizer = OptimalityCriteria()
+sensitivity_filter = SensitivityFilter()
+
+problem = TophProblem(domain, SIMP, optimizer, sensitivity_filter)
+
+sol = SimpleTopOpt.TopH.optimize(problem)
+
+heatmap(sol.design)
+```
 
 #### Topflow
 
@@ -51,20 +79,39 @@ working MATLAB installation before 2022a. See
 [the `MATLAB.jl` page](https://github.com/JuliaInterop/MATLAB.jl) for
 more detail.
 
-Specifically, we are interested in a numerical minimization of 
+This implements two fluidic topology optimization problems.
+
+In the first problem, the double pipe problem, we seek to minimize the dissipated energy (with the Brinkman penalty term) over a
+rectangular domain with two pairs of cut-outs immediately facing each other. So, 
+we expect to see two pipes, each connecting a pair.
+
+In the second problem, the pipe bend problem, we seek to minimize the dissipated
+energy in a rectangular domain with a cutout
+on the left and bottom sides. So, we expect to see a sort of pipe form connecting immediately these cutouts.
+
+```julia
+using SimpleTopOpt
+using Plots    
+
+Lx = 1.0; Ly = 1.0; nely = 30
+volfrac = 1/3 ; Uin = 1e0; rho = 1e0
+mu = 1e0; conit = 50
+
+domain = TopflowDomain(Lx, Ly, nely)
+fea = SimpleTopOpt.TopflowFEA(domain)
+optimizer = OptimalityCriteria()
+pbbc = SimpleTopOpt.PipeBendBC(domain, fea, Uin)
+pbp = PipeBendProblem(domain, volfrac, optimizer)
+
+sol = SimpleTopOpt.TopFlow.optimize(pbp)
+
+heatmap(sol.design)
+```
 
 ## Installation
 
 <> (TODO -- list it on julia package repository and write this?)
 
-## Usage
-
-`SimpleTopOpt.jl` is primarily accessed
-
-<> (TODO -- finish this once the API is finalized into the structures and problem containers as discussed)
-
 ## References and Citations
 
 <> (TODO -- fill this out and cite this instead of the above links?)
-
-
