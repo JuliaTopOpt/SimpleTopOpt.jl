@@ -121,6 +121,9 @@ function optimize(
 end
 
 
+"""
+Generic finite element analysis for the problem
+"""
 function Top88FEA(nu::Float64)
     A11 = [12 3 -6 -3; 3 12 3 0; -6 3 12 -3; -3 0 -3 12]
     A12 = [-6 -3 0 3; -3 -6 -3 -6; 0 -3 -6 3; 3 -6 3 -6]
@@ -133,7 +136,7 @@ end
 
 
 """
-
+Implements the sensitivity filter
 """
 function filter_implementation(s::SensitivityFilter, x, dc::Matrix{Float64}, dv::Matrix{Float64}, H, Hs)
     dc[:] = H * (x[:] .* dc[:]) ./ Hs ./ max(1e-3, maximum(x[:]))
@@ -142,7 +145,7 @@ function filter_implementation(s::SensitivityFilter, x, dc::Matrix{Float64}, dv:
 end
 
 """
-
+Implements the density filter
 """
 function filter_implementation(d::DensityFilter, x, dc::Matrix{Float64}, dv::Matrix{Float64}, H, Hs)
     dc[:] = H * (dc[:] ./ Hs)
@@ -227,10 +230,16 @@ function OC(
 end
 
 # NOTE -- the below function signatures are gross. Can this be avoided.
+"""
+OC update for the sensitivities
+"""
 function OC_update_filter(s::SensitivityFilter, xnew, H, Hs)
     return xnew
 end
 
+"""
+OC update for the densities
+"""
 function OC_update_filter(d::DensityFilter, xnew, H, Hs)
     return (H * xnew[:]) ./ Hs
 end
