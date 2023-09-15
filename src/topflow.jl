@@ -423,6 +423,9 @@ function OCUpdate(xPhys, sens, dV, problem_container)
 
 end
 
+"""
+Adjoint solver implementation
+"""
 function compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, EN)
     sR = [call_dPHIds(dxv, dyv, muv, alpha_T, S[fea.edofMat']); zeros(4, fea.neltot)]
 
@@ -438,6 +441,9 @@ function compute_adjoint_solution(dxv, dyv, muv, rhov, alpha_T, S, fea, bc, ND, 
     return L
 end
 
+"""
+Sensitivity computation implementation
+"""
 function compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, domain, L)
     sR = call_dRESdg(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S[fea.edofMat'])
 
