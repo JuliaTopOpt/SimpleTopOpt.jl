@@ -459,11 +459,5 @@ function compute_sensitivities(dxv, dyv, muv, rhov, alpha_T, dalpha_T, S, fea, d
 end
 
 
-function init(problem_container)
-
-
-end
-
-
 
 end
