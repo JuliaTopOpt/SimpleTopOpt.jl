@@ -4,56 +4,37 @@ using LinearAlgebra
 using SparseArrays
 using Statistics
 
-export top88
+using ..Structs
 
-# Problem parameters
-# SIMP penalization power
-const penal = 3.0
-# Sensitivity/ density filter radius divided by element size
-const rmin = 2.0
 
-# Physical parameters
-# Young's modulus (for the solid material)
-const E0 = 1
-# Minimum value for Young's modulus for the modified SIMP law
-const Emin = 1e-9
-# Poisson's ratio
-const nu = 0.3
+export optimize
 
 """
-    top88(nelx, nely, volfrac, penal, rmin, ft)
+    optimize
 
 A direct, naive Julia port of Andreassen et al. "Efficient topology optimization in MATLAB
 using 88 lines of code." By default, this will reproduce the optimized MBB beam from Sigmund
 (2001).
 
-# Arguments
-- `nelx::S`: Number of elements in the horizontal direction
-- `nely::S`: Number of elements in the vertical direction
-- `volfrac::T`: Prescribed volume fraction
-- `ft::Bool`: Choose between sensitivity (if true) or density filter (if false). Defaults
-    to sensitivity filter.
-- `write::Bool`: If true, will write out iteration number, changes, and density for each
-    iteration. Defaults for false.
-- `loop_max::Int`: Explicitly set the maximum number of iterations. Defaults to 1000.
-
-# Returns
-- `Matrix{T}`: Final material distribution, represented as a matrix
 """
-function top88(
-    nelx::S = 60,
-    nely::S = 20,
-    volfrac::T = 0.5,
-    ft::Bool = true,
-    write::Bool = false,
+function optimize(
+    problem::Top88Problem,
+    writeout::Bool = false,
     loop_max::Int = 1000,
-) where {S<:Integer,T<:AbstractFloat}
-    # Prepare finite element analysis
-    A11 = [12 3 -6 -3; 3 12 3 0; -6 3 12 -3; -3 0 -3 12]
-    A12 = [-6 -3 0 3; -3 -6 -3 -6; 0 -3 -6 3; 3 -6 3 -6]
-    B11 = [-4 3 -2 9; 3 -4 -9 4; -2 -9 -4 -3; 9 4 -3 -4]
-    B12 = [2 -3 4 -9; -3 2 9 -2; 4 9 2 3; -9 -2 3 2]
-    KE = 1 / (1 - nu^2) / 24 * ([A11 A12; A12' A11] + nu * [B11 B12; B12' B11])
+)::Top88Solution
+
+    nelx = problem.domain.nelx
+    nely = problem.domain.nely
+
+    rmin = problem.filter.rmin
+    penal = problem.SIMP.penal
+    E0 = problem.SIMP.E0
+    Emin = problem.SIMP.Emin
+
+    nu = problem.nu
+    volfrac = problem.volfrac
+
+    KE = Top88FEA(nu)
 
     nodenrs = reshape(1:(1+nelx)*(1+nely), 1 + nely, 1 + nelx)
     edofVec = reshape(2 * nodenrs[1:end-1, 1:end-1] .+ 1, nelx * nely, 1)
@@ -69,8 +50,6 @@ function top88(
     iK = reshape(kron(edofMat, ones(8, 1))', 64 * nelx * nely, 1)
     jK = reshape(kron(edofMat, ones(1, 8))', 64 * nelx * nely, 1)
 
-    # Loads and supports
-    # OLD: F = sparse([2], [1], [-1], 2*(nely+1)*(nelx+1), 1)
     F = spzeros(2 * (nely + 1) * (nelx + 1))
     F[2, 1] = -1
     U = spzeros(2 * (nely + 1) * (nelx + 1))
@@ -80,7 +59,7 @@ function top88(
     freedofs = setdiff(alldofs, fixeddofs)
 
     # Prepare the filter
-    H, Hs = prepare_filter(nelx, nely)
+    H, Hs = prepare_filter(problem.domain, rmin)
 
     # Initialize iteration
     x = volfrac * ones(nely, nelx)
@@ -100,7 +79,6 @@ function top88(
         KK = cholesky(K[freedofs, freedofs])
         U[freedofs] = KK \ F[freedofs]
 
-        # OLD: edM = [convert(Int64,i) for i in edofMat]
         mat = (U[edofMat] * KE) .* U[edofMat]
 
         # Objective function and sensitivity analysis
@@ -111,41 +89,79 @@ function top88(
         dv = ones(nely, nelx)
 
         # Filtering/ modification of sensitivities
-        if ft
-            dc[:] = H * (x[:] .* dc[:]) ./ Hs ./ max(1e-3, maximum(x[:]))
-        else
-            dc[:] = H * (dc[:] ./ Hs)
-            dv[:] = H * (dv[:] ./ Hs)
-        end
+        dc, dv = filter_implementation(problem.filter, x, dc, dv, H, Hs)
 
         # Optimality criteria update of design variables and physical densities
-        # TODO -- probable issue with xPhys not pass by reference?
-        xnew = OC(nelx, nely, x, volfrac, dc, dv, xPhys, ft)
-
+        xnew = OC(nelx, nely, x, volfrac, dc, dv, H, Hs, problem.filter)
         change = maximum(abs.(x - xnew))
         x = xnew
 
-        write && println(
-            "Loop = ",
-            loop,
-            ", Change = ",
-            change,
-            ", c = ",
-            c,
-            ", structural density = ",
-            mean(x),
-        )
+        if writeout
+            println(
+                "Loop = ",
+                loop,
+                ", Change = ",
+                change,
+                ", c = ",
+                c,
+                ", structural density = ",
+                mean(x),
+            )
+        end
         loop >= loop_max && break
     end
 
-    return x
+    converged = change <= 0.01
+
+    return Top88Solution(
+        x,
+        converged,
+        loop,
+    )
 end
 
 
 """
+Generic finite element analysis for the problem
+"""
+function Top88FEA(nu::Float64)
+    A11 = [12 3 -6 -3; 3 12 3 0; -6 3 12 -3; -3 0 -3 12]
+    A12 = [-6 -3 0 3; -3 -6 -3 -6; 0 -3 -6 3; 3 -6 3 -6]
+    B11 = [-4 3 -2 9; 3 -4 -9 4; -2 -9 -4 -3; 9 4 -3 -4]
+    B12 = [2 -3 4 -9; -3 2 9 -2; 4 9 2 3; -9 -2 3 2]
+    KE = 1 / (1 - nu^2) / 24 * ([A11 A12; A12' A11] + nu * [B11 B12; B12' B11])
+
+    return KE
+end
+
+
+"""
+Implements the sensitivity filter
+"""
+function filter_implementation(s::SensitivityFilter, x, dc::Matrix{Float64}, dv::Matrix{Float64}, H, Hs)
+    dc[:] = H * (x[:] .* dc[:]) ./ Hs ./ max(1e-3, maximum(x[:]))
+
+    return dc, dv
+end
+
+"""
+Implements the density filter
+"""
+function filter_implementation(d::DensityFilter, x, dc::Matrix{Float64}, dv::Matrix{Float64}, H, Hs)
+    dc[:] = H * (dc[:] ./ Hs)
+    dv[:] = H * (dv[:] ./ Hs)
+
+    return dc, dv
+end
+
+"""
 Prepare sensitivity/ density filter
 """
-function prepare_filter(nelx::S, nely::S) where {S<:Integer}
+function prepare_filter(domain::Top88Domain, rmin::Float64)
+    
+    nelx = domain.nelx
+    nely = domain.nely
+
     iH = ones(nelx * nely * (2 * (convert(Int64, ceil(rmin) - 1)) + 1)^2)
     jH = ones(size(iH))
     sH = zeros(size(iH))
@@ -174,15 +190,16 @@ end
 Optimality criteria update
 """
 function OC(
-    nelx::S,
-    nely,
+    nelx::Int64,
+    nely::Int64,
     x,
-    volfrac,
-    dc::Matrix{T},
-    dv,
-    xPhys::Matrix{T},
-    ft::Bool,
-) where {S<:Integer,T<:AbstractFloat}
+    volfrac::Float64,
+    dc::Matrix{Float64},
+    dv::Matrix{Float64},
+    H,
+    Hs,
+    filter::U,
+) where U <: Filter
     l1 = 0
     l2 = 1e9
     move = 0.2
@@ -199,12 +216,8 @@ function OC(
                 xnew[j, i] = max(0.000, max(xji - move, min(1, min(xji + move, XB[j, i]))))
             end
         end
-
-        if ft
-            xPhys = xnew
-        else
-            xPhys[:] = (H * xnew[:]) ./ Hs
-        end
+        
+        xPhys = OC_update_filter(filter, xnew, H, Hs)
 
         if sum(xPhys[:]) > volfrac * nelx * nely
             l1 = lmid
@@ -215,5 +228,21 @@ function OC(
 
     return xnew
 end
+
+# NOTE -- the below function signatures are gross. Can this be avoided.
+"""
+OC update for the sensitivities
+"""
+function OC_update_filter(s::SensitivityFilter, xnew, H, Hs)
+    return xnew
+end
+
+"""
+OC update for the densities
+"""
+function OC_update_filter(d::DensityFilter, xnew, H, Hs)
+    return (H * xnew[:]) ./ Hs
+end
+
 
 end
