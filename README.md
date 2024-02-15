@@ -120,14 +120,14 @@ heatmap(sol.design)
 #### Top3d
 This code implements the minimum compliance 3-D topology optimization problem for a cantilevered beam as shown in the following figure-
 
-![Alt text](https://drive.google.com/file/d/1UwWkSvq8HkAYCqM042Jtrhq-Q82qv_94/view?usp=drive_link "beam")
+![Alt text](https://i.postimg.cc/w3N1KKN5/cantilever-beam.png "beam")
 <!-- <img src="https://drive.google.com/file/d/1UwWkSvq8HkAYCqM042Jtrhq-Q82qv_94/view?usp=drive_link" alt="Alt text" title="Optional title"> -->
 
 The result is displayed as an interactive visualization in a popup window. 
 
 We have also comapared the code's performance with the original `MATLAB` code and the results are displayed upon execution respectively. If one is more interested in seeing the optimized resultant shape than the time taken by various sections of the code, one should uncomment `250`th line and should comment out `251`st line. Then, upon execution, the popup window will stay on the screen for one to observe the resultant optimized shape closely. The shape should appear as follows-
 
-![Alt text](https://drive.google.com/file/d/1NynLFL2aY7IeVl8omjGKbeyQIgu55dNE/view?usp=drive_link "shape")
+![Alt text](https://i.postimg.cc/34sWy1sD/shape.png "shape")
 
 The times taken by various sections of the code will still be displayed once you exit from the `Makie` popup window but that will not show accurate results since the time one took to observe the shape on the popup window will also be added to the display_3D section of the code thus increasing the time taken for program execution.
 
