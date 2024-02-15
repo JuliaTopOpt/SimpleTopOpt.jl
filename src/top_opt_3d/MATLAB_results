@@ -1,0 +1,20 @@
+ ──────────────────────────────────────────────────────────────────────────────────────  
+ Section                                           ncalls     time    %tot     avg   
+ ──────────────────────────────────────────────────────────────────────────────────────
+ top3d                                                  1     53.7s  100.0%   53.7s
+   optimize                                             1     50.2s   93.6%   50.2s
+     fe_analysis                                      146     48.9s   91.1%   335ms
+     optimality_criteria_update                       146     987ms    1.8%  6.76ms  
+     print_results                                    146    34.0ms    0.1%   233μs  
+     objective_function_and_sensitivity_analysis      146     257ms    0.5%  1.76μs
+     filtering_and_modification_of_sensitivities      146    41.0ms    0.1%   281μs
+     initialize_iteration                               1     640μs    0.0%   640μs 
+   display_3D                                           1     3.24s    6.0%   3.24s   
+   prepare_finite_element_analysis                      1    94.7ms    0.2%  94.7ms   
+   prepare_filter                                       1    95.6ms    0.2%  95.6ms   
+   user_defined_support_fixed_dofs                      1    6.42ms    0.0%  6.42ms   
+   user_defined_load_dofs                               1    10.1ms    0.0%  10.1ms     
+   user_defined_loop_parameters                         1    1.65ms    0.0%   1.65s   
+   user_defined_material_properties                     1     207μs    0.0%   207μs
+ ──────────────────────────────────────────────────────────────────────────────────────
+ 
