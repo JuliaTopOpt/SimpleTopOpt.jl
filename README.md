@@ -129,7 +129,7 @@ We have also comapared the code's performance with the original `MATLAB` code an
 
 ![Alt text](https://i.postimg.cc/34sWy1sD/shape.png "shape")
 
-The times taken by various sections of the code will still be displayed once you exit from the `Makie` popup window but that will not show accurate results since the time one took to observe the shape on the popup window will also be added to the display_3D section of the code thus increasing the time taken for program execution.
+The times taken by various sections of the code will still be displayed once you exit from the `Makie` popup window but that will not show accurate results since the time one took to observe the shape on the popup window will also be added to the time taken by the display_3D section of the code thus increasing the overall time taken for program execution.
 
 To run the code, simply go to the directory `SimpleTopOpt.jl/src/top_opt_3d/` and run the command `julia top3d.jl` on the terminal.
 
