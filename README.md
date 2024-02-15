@@ -24,7 +24,7 @@ thermal compliance, fluid flows and 3-D topology optimization. The package is pr
 the `optimize` function and problem containers `Top88Problem`, `TophProblem`,
 `DoublePipeProblem`, and `PipeBendProblem`, the latter two of which are both fluid flow problems. 
 
-The 3-D topology optimization implementation `top3d` solves the minimum compliance problem
+The 3-D topology optimization Julia implementation `top3d.jl` solves the minimum compliance problem
 for the cantilevered beam. It can be modified to solve problems with different boundary conditions,
 multiple load cases, active and passive elements, compliant mechanism synthesis, etc. Follow the guidelines
 from the corresponding educational paper if you desire to do so. Moreover, the implementation also compares
@@ -117,7 +117,7 @@ sol = SimpleTopOpt.TopFlow.optimize(pbp)
 heatmap(sol.design)
 ```
 
-#### Top3d
+#### Top_opt_3d
 This code implements the minimum compliance 3-D topology optimization problem for a cantilevered beam as shown in the following figure-
 
 ![Alt text](https://i.postimg.cc/w3N1KKN5/cantilever-beam.png "beam")
