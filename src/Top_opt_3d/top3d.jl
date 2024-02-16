@@ -1,5 +1,6 @@
 # 3D TOPOLOGY OPITMIZATION CODE BY LIU AND TOVAR (JUL 2013) ORIGINALLY GIVEN IN MATLAB.
 # TRANSLATED TO JULIA BY UTKARSH YASHVARDHAN UNDER THE GUIDANCE OF MOHAMED TAREK (2024).
+# The authors of the original code gave us permission to translate their code to Julia under MIT license.
 
 using SparseArrays
 using Printf
