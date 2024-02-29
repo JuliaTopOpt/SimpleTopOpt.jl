@@ -9,7 +9,6 @@ using Statistics
 using LinearAlgebra
 using Makie
 using GLMakie
-using BenchmarkTools
 using TimerOutputs
 
 const to = TimerOutput();
@@ -101,7 +100,7 @@ function fe_analysis(KE, Emin, xPhys, penal, E0, nele, iK, jK, freedofs, F)
     K = sparse(iK, jK, sK);
     K = (K+K')/2;
     KK = cholesky(K[freedofs, freedofs]);
-    KK \ F[freedofs];
+    KK \ F[freedofs, :];
 end
 
 function objective_function_and_sensitivity_analysis(U, KE, edofMat, nelx, nely, nelz, Emin, xPhys, penal, E0)
@@ -316,7 +315,7 @@ println();
 
 # displaying timer outputs of executing corresponding MATLAB code.
 println("───────────────────────────────────────MATLAB───────────────────────────────────────────");
-open("MATLAB_results") do f
+open("matlab_results.txt") do f
     while !eof(f)      
        s = readline(f)
        println("$s")
