@@ -7,19 +7,28 @@
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 
 
-A small package implementing basic techniques for classic elastic compliance, thermal compliance,
-and fluidic topology optimization problems, following 
-[*Efficient topology Optimization in MATLAB using 88 lines of code*](https://link.springer.com/article/10.1007/s00158-010-0594-7), 
-the `toph` code listing from [*Topology Optimization*](https://www.amazon.com/Topology-Optimization-Martin-Philip-Bendsoe/dp/3540429921),
-and [*A detailed introduction to density-based topology optimization of fluid flow problems with implementation in MATLAB*](https://arxiv.org/abs/2207.13695).
+A small package implementing basic techniques for topology optimization problems.
+
+Current implementations-
+
+1. Classic elastic compliance from [*Efficient topology Optimization in MATLAB using 88 lines of code*](https://link.springer.com/article/10.1007/s00158-010-0594-7).
+2. The thermal compliance `toph` code listing from [*Topology Optimization*](https://www.amazon.com/Topology-Optimization-Martin-Philip-Bendsoe/dp/3540429921).
+3. Fluidic topology optimization problem from [*A detailed introduction to density-based topology optimization of fluid flow problems with implementation in MATLAB*](https://arxiv.org/abs/2207.13695).
+4. 3-D topology optimization from [*An efficient 3D topology optimization code written in Matlab*](https://link.springer.com/article/10.1007/s00158-014-1107-x).
 
 ## Features and Usage
 
-`SimpleTopOpt.jl` implements three topology optimization algorithms following
+`SimpleTopOpt.jl` implements four topology optimization algorithms following
 popular educational papers for solutions to problems in structural compliance,
-thermal compliance, and fluid flows. The package is primarily accessed through
+thermal compliance, fluid flows and 3-D topology optimization. The package is primarily accessed through
 the `optimize` function and problem containers `Top88Problem`, `TophProblem`,
-`DoublePipeProblem`, and `PipeBendProblem`, the latter two of which are both fluid flow problems.
+`DoublePipeProblem`, and `PipeBendProblem`, the latter two of which are both fluid flow problems. 
+
+The 3-D topology optimization Julia implementation `top3d.jl` solves the minimum compliance problem
+for the cantilevered beam. It can be modified to solve problems with different boundary conditions,
+multiple load cases, active and passive elements, compliant mechanism synthesis, etc. Follow the guidelines
+from the corresponding educational paper if you desire to do so. Moreover, the implementation also compares
+the time taken to execute different sections of the code with corresponding sections in the original MATLAB code.
 
 
 #### Top88
@@ -108,8 +117,26 @@ sol = SimpleTopOpt.TopFlow.optimize(pbp)
 heatmap(sol.design)
 ```
 
+#### Top_opt_3d
+This code implements the minimum compliance 3-D topology optimization problem for a cantilevered beam as shown in the following figure-
+
+![Alt text](https://i.postimg.cc/w3N1KKN5/cantilever-beam.png "beam")
+<!-- <img src="https://drive.google.com/file/d/1UwWkSvq8HkAYCqM042Jtrhq-Q82qv_94/view?usp=drive_link" alt="Alt text" title="Optional title"> -->
+
+The result is displayed as an interactive visualization in a popup window. 
+
+We have also comapared the code's performance with the original `MATLAB` code and the results are displayed upon execution respectively. If one is more interested in seeing the optimized resultant shape than the time taken by various sections of the code, one should uncomment `250`th line and should comment out `251`st line. Then, upon execution, the popup window will stay on the screen for one to observe the resultant optimized shape closely. The shape should appear as follows-
+
+![Alt text](https://i.postimg.cc/34sWy1sD/shape.png "shape")
+
+The times taken by various sections of the code will still be displayed once you exit from the `Makie` popup window but that will not show accurate results since the time one took to observe the shape on the popup window will also be added to the time taken by the display_3D section of the code thus increasing the overall time taken for program execution.
+
+To run the code, simply go to the directory `SimpleTopOpt.jl/src/top_opt_3d/` and run the command `julia top3d.jl` on the terminal.
+
+Also, we have also included `MATLAB` code along with our code for reference. It has been modified to get execution time for various sections of the code.
+
+
 ## Acknowledgements
 
 Thanks to Mohamed Tarek and Yuqing Zhou for their advice over
 summer 2023 as the initial development was underway.
-
